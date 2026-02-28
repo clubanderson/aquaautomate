@@ -1,0 +1,112 @@
+---
+title: "Neon Tetra Care Guide"
+slug: "neon-tetra-care"
+description: "Complete care guide for Neon Tetras — water parameters, tank mates, feeding, and how to automate their environment."
+category: "species"
+difficulty: "easy"
+author: "AquaAutomate"
+date: "2026-02-28"
+tags: ["freshwater", "community", "neon-tetra", "beginner", "species-care"]
+products: ["neon-tetra-school-6", "hygger-full-spectrum-light-24"]
+image: "/images/guides/neon-tetra.jpg"
+---
+
+# Neon Tetra Care Guide
+
+The **Neon Tetra** (*Paracheirodon innesi*) is one of the most popular freshwater aquarium fish — and for good reason. Their iridescent blue and red stripes look incredible under the right lighting, they're peaceful, hardy, and perfect for beginners.
+
+## Quick Facts
+
+| Parameter | Value |
+|-----------|-------|
+| **Scientific Name** | Paracheirodon innesi |
+| **Size** | 1.5 inches (3.5 cm) |
+| **Lifespan** | 5-8 years |
+| **Temperature** | 70-81°F (21-27°C) |
+| **pH** | 6.0-7.0 |
+| **Minimum Tank** | 10 gallons |
+| **School Size** | 6+ (more is better) |
+| **Difficulty** | Beginner |
+
+## Water Parameters
+
+Neon Tetras prefer **soft, slightly acidic water**:
+
+- **Temperature**: 70-81°F (ideal: 74-76°F)
+- **pH**: 6.0-7.0
+- **Hardness**: 2-10 dGH
+- **Ammonia/Nitrite**: 0 ppm (always)
+- **Nitrate**: Below 20 ppm
+
+**Pro tip**: Use a Tuya water quality sensor + Home Assistant to monitor these parameters 24/7 and get alerts on your phone.
+
+## Tank Mates
+
+Neon Tetras are peaceful community fish. Good tank mates include:
+
+- Corydoras Catfish
+- Harlequin Rasboras
+- Cherry Shrimp
+- Otocinclus
+- Dwarf Gouramis
+- Cardinal Tetras
+
+**Avoid**: Angelfish (will eat neons), large cichlids, aggressive species.
+
+## Feeding
+
+Feed 1-2 times daily, only what they can eat in 2 minutes:
+
+- High-quality micro pellets or flake food
+- Frozen or freeze-dried brine shrimp (1-2x per week)
+- Frozen daphnia (great for color)
+
+**Automation idea**: Use a smart auto-feeder on a Home Assistant schedule. Set up vacation mode with slightly reduced feeding.
+
+## Lighting
+
+Neon Tetras prefer **moderate to low lighting**. Their colors actually pop more with dimmer lights against a dark background. A Hygger Full Spectrum light on a sunrise/sunset schedule is perfect.
+
+See our guide: [Automate Your Tank Lighting](/guides/automate-tank-lighting)
+
+## Common Issues
+
+### Neon Tetra Disease (NTD)
+- Symptoms: White patches, faded colors, erratic swimming
+- Cause: *Pleistophora hyphessobryconis* parasite
+- Treatment: No cure — quarantine and remove affected fish immediately
+
+### Fin Rot
+- Symptoms: Ragged, deteriorating fins
+- Cause: Poor water quality + bacterial infection
+- Treatment: Fix water quality first, then medicate if needed
+
+## Automate Their Environment
+
+Set up Home Assistant to keep your neons happy automatically:
+
+```yaml
+# Temperature Alert for Neon Tetra Tank
+automation:
+  - alias: "Neon Tank Temp Alert"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.aquarium_temperature
+        above: 82
+    action:
+      - service: notify.mobile_app
+        data:
+          title: "🐟 Tank Alert"
+          message: "Neon Tetra tank is {{ states('sensor.aquarium_temperature') }}°F — too warm!"
+
+  - alias: "Neon Tank Temp Low Alert"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.aquarium_temperature
+        below: 68
+    action:
+      - service: notify.mobile_app
+        data:
+          title: "🐟 Tank Alert"
+          message: "Neon Tetra tank is {{ states('sensor.aquarium_temperature') }}°F — too cold!"
+```

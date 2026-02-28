@@ -1,0 +1,119 @@
+---
+title: "Automate Your Tank Lighting with Home Assistant + Hygger Lights"
+slug: "automate-tank-lighting"
+description: "Set up automated sunrise/sunset schedules for your aquarium using Hygger LED lights, Tuya smart plugs, and Home Assistant."
+category: "automation"
+difficulty: "easy"
+author: "AquaAutomate"
+date: "2026-02-28"
+tags: ["lighting", "home-assistant", "tuya", "hygger", "automation"]
+products: ["hygger-full-spectrum-light-24", "tuya-smart-plug-4pack"]
+image: "/images/guides/tank-lighting.jpg"
+---
+
+# Automate Your Tank Lighting with Home Assistant
+
+Your fish need a consistent day/night cycle — and you shouldn't have to remember to flip a switch every morning and evening. In this guide, we'll set up **fully automated lighting** for your aquarium using Home Assistant, a Hygger LED light, and a Tuya smart plug.
+
+## What You'll Need
+
+- **Hygger Full Spectrum Aquarium Light** — has a built-in timer, but we'll control it externally for more flexibility
+- **Tuya Smart Plug** — controls power to the light; flashed with Tuya-Local for 100% local control
+- **Home Assistant** — the brain of the operation
+- A WiFi network
+
+## Why Not Just Use the Built-in Timer?
+
+Good question. The Hygger light has a timer — but Home Assistant gives you:
+
+1. **Sunrise/sunset tracking** — your lights follow the actual sun
+2. **Scene integration** — one button for "feeding mode" (lights dim)
+3. **Vacation mode** — slightly randomized schedule so it looks natural
+4. **Notifications** — know if the plug goes offline
+
+## Step 1: Set Up the Tuya Smart Plug
+
+Plug your Hygger light into the Tuya smart plug. Set the light to its maximum brightness and leave it "on" — the smart plug will handle the on/off.
+
+If you haven't integrated Tuya with Home Assistant yet:
+
+1. Install the **Tuya** integration in Home Assistant
+2. Or even better — flash the plug with **Tuya-Local** firmware for cloud-free control
+
+## Step 2: Home Assistant Automation
+
+Add this to your `automations.yaml`:
+
+```yaml
+# Aquarium Lighting — Sunrise Schedule
+automation:
+  - alias: "Tank Lights On — Sunrise"
+    description: "Turn on aquarium lights 30 min after sunrise"
+    trigger:
+      - platform: sun
+        event: sunrise
+        offset: "00:30:00"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_aquarium_plug
+
+  - alias: "Tank Lights Off — Sunset"
+    description: "Turn off aquarium lights at sunset"
+    trigger:
+      - platform: sun
+        event: sunset
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_aquarium_plug
+
+  - alias: "Tank Feeding Mode"
+    description: "Dim lights for 30 minutes during feeding"
+    trigger:
+      - platform: event
+        event_type: call_service
+        event_data:
+          domain: script
+          service: tank_feeding_mode
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_aquarium_plug
+      - delay: "00:30:00"
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_aquarium_plug
+```
+
+## Step 3: Add a Dashboard Card
+
+Add this to your Lovelace dashboard for at-a-glance tank status:
+
+```yaml
+type: entities
+title: "🐟 Aquarium"
+entities:
+  - entity: switch.tuya_aquarium_plug
+    name: "Tank Light"
+    icon: "mdi:lightbulb"
+  - entity: sun.sun
+    name: "Sun Position"
+  - type: custom:template-entity-row
+    name: "Light Schedule"
+    state: >
+      {% if is_state('switch.tuya_aquarium_plug', 'on') %}
+        On until sunset
+      {% else %}
+        Off until sunrise + 30min
+      {% endif %}
+```
+
+## Result
+
+Your tank now has:
+- Automated sunrise/sunset lighting that follows the real sun
+- A feeding mode you can trigger from your phone
+- Dashboard monitoring so you always know the light status
+
+Next up: [Automate Water Temperature Monitoring](/guides/water-temperature-monitoring) →
