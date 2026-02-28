@@ -4,15 +4,38 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProductGrid } from "@/components/product-grid";
 import { DEMO_PRODUCTS, DEMO_COLLECTIONS } from "@/lib/commerce/demo-data";
+import { getProducts, getCollections } from "@/lib/shopify";
+import { normalizeShopifyProduct, normalizeShopifyCollection } from "@/lib/commerce/adapters/shopify";
 import { getAllGuides } from "@/lib/guides";
 
 /** Number of featured products to show on the homepage */
 const FEATURED_PRODUCT_COUNT = 4;
 /** Number of guides to show on the homepage */
 const FEATURED_GUIDE_COUNT = 3;
+/** Max collections to display in the category grid */
+const MAX_COLLECTIONS = 10;
 
-export default function HomePage() {
+export default async function HomePage() {
   const guides = getAllGuides().slice(0, FEATURED_GUIDE_COUNT);
+
+  /* Fetch real data from Shopify, fall back to demo data if store is empty */
+  let products = DEMO_PRODUCTS;
+  let collections = DEMO_COLLECTIONS;
+
+  try {
+    const shopifyProducts = await getProducts(FEATURED_PRODUCT_COUNT);
+    if (shopifyProducts.length > 0) {
+      products = shopifyProducts.map(normalizeShopifyProduct);
+    }
+
+    const shopifyCollections = await getCollections(MAX_COLLECTIONS);
+    const filtered = shopifyCollections.filter((c) => c.handle !== "frontpage");
+    if (filtered.length > 0) {
+      collections = filtered.map(normalizeShopifyCollection);
+    }
+  } catch {
+    /* Shopify unavailable — use demo data */
+  }
 
   return (
     <div className="space-y-16 pb-16">
@@ -116,7 +139,7 @@ export default function HomePage() {
           </Button>
         </div>
         <ProductGrid
-          products={DEMO_PRODUCTS.slice(0, FEATURED_PRODUCT_COUNT)}
+          products={products.slice(0, FEATURED_PRODUCT_COUNT)}
         />
       </section>
 
@@ -124,7 +147,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <h2 className="mb-6 text-2xl font-bold">Shop by Category</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {DEMO_COLLECTIONS.map((col) => (
+          {collections.map((col) => (
             <Link
               key={col.id}
               href={`/collections/${col.handle}`}

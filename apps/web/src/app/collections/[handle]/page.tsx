@@ -4,17 +4,33 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ProductGrid } from "@/components/product-grid";
 import { DEMO_COLLECTIONS } from "@/lib/commerce/demo-data";
+import { getCollectionByHandle, getCollections } from "@/lib/shopify";
+import { normalizeShopifyCollection } from "@/lib/commerce/adapters/shopify";
 import { SITE_NAME } from "@/lib/constants";
+import type { NormalizedCollection } from "@/lib/commerce/types";
 
 interface CollectionPageProps {
   params: Promise<{ handle: string }>;
+}
+
+async function findCollection(handle: string): Promise<NormalizedCollection | undefined> {
+  try {
+    const shopifyCollection = await getCollectionByHandle(handle);
+    if (shopifyCollection) {
+      return normalizeShopifyCollection(shopifyCollection);
+    }
+  } catch {
+    /* Shopify unavailable */
+  }
+
+  return DEMO_COLLECTIONS.find((c) => c.handle === handle);
 }
 
 export async function generateMetadata({
   params,
 }: CollectionPageProps): Promise<Metadata> {
   const { handle } = await params;
-  const collection = DEMO_COLLECTIONS.find((c) => c.handle === handle);
+  const collection = await findCollection(handle);
   if (!collection) return { title: "Collection Not Found" };
 
   return {
@@ -24,6 +40,16 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams() {
+  try {
+    const shopifyCollections = await getCollections();
+    if (shopifyCollections.length > 0) {
+      return shopifyCollections
+        .filter((c) => c.handle !== "frontpage")
+        .map((c) => ({ handle: c.handle }));
+    }
+  } catch {
+    /* Fall back to demo collections */
+  }
   return DEMO_COLLECTIONS.map((c) => ({ handle: c.handle }));
 }
 
@@ -32,8 +58,7 @@ export default async function CollectionPage({
 }: CollectionPageProps) {
   const { handle } = await params;
 
-  // In production, this would call getCollectionByHandle(handle) from Shopify
-  const collection = DEMO_COLLECTIONS.find((c) => c.handle === handle);
+  const collection = await findCollection(handle);
   if (!collection) notFound();
 
   return (

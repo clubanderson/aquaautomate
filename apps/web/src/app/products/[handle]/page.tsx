@@ -6,7 +6,10 @@ import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SourceBadge } from "@/components/source-badge";
 import { DEMO_PRODUCTS } from "@/lib/commerce/demo-data";
+import { getProductByHandle, getProducts } from "@/lib/shopify";
+import { normalizeShopifyProduct } from "@/lib/commerce/adapters/shopify";
 import { SITE_NAME } from "@/lib/constants";
+import type { NormalizedProduct } from "@/lib/commerce/types";
 import { AddToCartButton } from "./add-to-cart-button";
 
 /** Fallback gradient for product images */
@@ -17,11 +20,24 @@ interface ProductPageProps {
   params: Promise<{ handle: string }>;
 }
 
+async function findProduct(handle: string): Promise<NormalizedProduct | undefined> {
+  try {
+    const shopifyProduct = await getProductByHandle(handle);
+    if (shopifyProduct) {
+      return normalizeShopifyProduct(shopifyProduct);
+    }
+  } catch {
+    /* Shopify unavailable */
+  }
+
+  return DEMO_PRODUCTS.find((p) => p.handle === handle);
+}
+
 export async function generateMetadata({
   params,
 }: ProductPageProps): Promise<Metadata> {
   const { handle } = await params;
-  const product = DEMO_PRODUCTS.find((p) => p.handle === handle);
+  const product = await findProduct(handle);
   if (!product) return { title: "Product Not Found" };
 
   return {
@@ -31,6 +47,14 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams() {
+  try {
+    const shopifyProducts = await getProducts();
+    if (shopifyProducts.length > 0) {
+      return shopifyProducts.map((p) => ({ handle: p.handle }));
+    }
+  } catch {
+    /* Fall back to demo products */
+  }
   return DEMO_PRODUCTS.filter((p) => p.source === "shopify").map((p) => ({
     handle: p.handle,
   }));
@@ -39,8 +63,7 @@ export async function generateStaticParams() {
 export default async function ProductPage({ params }: ProductPageProps) {
   const { handle } = await params;
 
-  // In production, this would call getProductByHandle(handle) from Shopify
-  const product = DEMO_PRODUCTS.find((p) => p.handle === handle);
+  const product = await findProduct(handle);
   if (!product) notFound();
 
   const formattedPrice = new Intl.NumberFormat("en-US", {
