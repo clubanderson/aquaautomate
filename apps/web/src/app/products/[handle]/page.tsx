@@ -1,3 +1,6 @@
+/** Revalidate product pages every 60 seconds */
+export const revalidate = 60;
+
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";

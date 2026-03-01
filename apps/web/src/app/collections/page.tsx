@@ -1,3 +1,6 @@
+/** Revalidate collections every 60 seconds to pick up new Shopify products */
+export const revalidate = 60;
+
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
