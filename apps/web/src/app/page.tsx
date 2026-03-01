@@ -1,3 +1,6 @@
+/** Revalidate homepage every 60 seconds to pick up new Shopify products */
+export const revalidate = 60;
+
 import Link from "next/link";
 import { ArrowRight, Droplets, Cpu, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
