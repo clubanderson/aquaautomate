@@ -75,12 +75,16 @@ const PRODUCT_FRAGMENT = `
 
 export const GET_PRODUCTS_QUERY = `
   ${PRODUCT_FRAGMENT}
-  query GetProducts($first: Int!) {
-    products(first: $first) {
+  query GetProducts($first: Int!, $after: String) {
+    products(first: $first, after: $after) {
       edges {
         node {
           ...ProductFields
         }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }
