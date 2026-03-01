@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
-import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, Loader2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -11,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCart } from "./cart-context";
+import { createCheckout } from "@/app/actions/cart";
 
 interface CartDrawerProps {
   open: boolean;
@@ -19,6 +21,26 @@ interface CartDrawerProps {
 
 export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
   const { items, subtotal, removeItem, updateQuantity, clearCart } = useCart();
+  const [checkingOut, setCheckingOut] = useState(false);
+
+  async function handleCheckout() {
+    setCheckingOut(true);
+    try {
+      const lines = items.map((item) => ({
+        merchandiseId: item.variantId,
+        quantity: item.quantity,
+      }));
+      const result = await createCheckout(lines);
+
+      if ("checkoutUrl" in result) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        alert(result.error);
+      }
+    } finally {
+      setCheckingOut(false);
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -137,9 +159,17 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
               <Button
                 className="w-full bg-aqua text-deep-blue hover:bg-aqua-dim"
-                disabled
+                onClick={handleCheckout}
+                disabled={checkingOut}
               >
-                Checkout (Connect Shopify)
+                {checkingOut ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating checkout…
+                  </>
+                ) : (
+                  "Checkout"
+                )}
               </Button>
 
               <Button
