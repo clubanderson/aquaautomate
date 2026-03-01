@@ -10,6 +10,7 @@ import { DEMO_PRODUCTS, DEMO_COLLECTIONS } from "@/lib/commerce/demo-data";
 import { getProducts, getCollections } from "@/lib/shopify";
 import { normalizeShopifyProduct, normalizeShopifyCollection } from "@/lib/commerce/adapters/shopify";
 import { getAllGuides } from "@/lib/guides";
+import { BestSellers } from "@/components/best-sellers";
 
 /** Number of featured products to show on the homepage */
 const FEATURED_PRODUCT_COUNT = 4;
@@ -129,6 +130,9 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* Best Sellers */}
+      <BestSellers />
 
       {/* Featured Products */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

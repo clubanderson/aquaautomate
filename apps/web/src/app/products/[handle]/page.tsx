@@ -8,12 +8,16 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SourceBadge } from "@/components/source-badge";
+import { ProductBadges } from "@/components/product-badges";
 import { DEMO_PRODUCTS } from "@/lib/commerce/demo-data";
-import { getProductByHandle, getProducts } from "@/lib/shopify";
+import { getProductByHandle, getProducts, getAllProducts } from "@/lib/shopify";
 import { normalizeShopifyProduct } from "@/lib/commerce/adapters/shopify";
+import { isOnSale } from "@/lib/commerce/utils";
 import { SITE_NAME } from "@/lib/constants";
 import type { NormalizedProduct } from "@/lib/commerce/types";
 import { AddToCartButton } from "./add-to-cart-button";
+import { ProductRecommendations } from "@/components/product-recommendations";
+import { TankMates } from "@/components/tank-mates";
 
 /** Fallback gradient for product images */
 const PLACEHOLDER_GRADIENT =
@@ -34,6 +38,18 @@ async function findProduct(handle: string): Promise<NormalizedProduct | undefine
   }
 
   return DEMO_PRODUCTS.find((p) => p.handle === handle);
+}
+
+async function fetchAllProducts(): Promise<NormalizedProduct[]> {
+  try {
+    const shopifyProducts = await getAllProducts();
+    if (shopifyProducts.length > 0) {
+      return shopifyProducts.map(normalizeShopifyProduct);
+    }
+  } catch {
+    /* Shopify unavailable */
+  }
+  return DEMO_PRODUCTS;
 }
 
 export async function generateMetadata({
@@ -74,6 +90,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
     currency: product.price.currencyCode,
   }).format(Number(product.price.amount));
 
+  const formattedComparePrice =
+    isOnSale(product) && product.compareAtPrice
+      ? new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: product.compareAtPrice.currencyCode,
+        }).format(Number(product.compareAtPrice.amount))
+      : null;
+
+  const isSoldOut = product.inventoryStatus === "sold-out";
+  const allProducts = await fetchAllProducts();
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
@@ -93,7 +120,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
               src={product.featuredImage.url}
               alt={product.featuredImage.altText}
               fill
-              className="object-cover"
+              className={`object-cover ${isSoldOut ? "opacity-60 grayscale" : ""}`}
               sizes="(max-width: 1024px) 100vw, 50vw"
               priority
             />
@@ -108,16 +135,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
         {/* Details */}
         <div className="space-y-6">
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <SourceBadge
                 source={product.source}
                 vendorLabel={product.sourceLabel}
               />
-              {product.automationCompatible && (
-                <Badge className="bg-deep-blue/80 text-aqua border-aqua/30">
-                  HA Compatible
-                </Badge>
-              )}
+              <ProductBadges product={product} variant="inline" />
               {product.waterType && (
                 <Badge variant="secondary" className="capitalize">
                   {product.waterType}
@@ -127,7 +150,28 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
             <h1 className="text-3xl font-bold">{product.title}</h1>
 
-            <p className="text-3xl font-bold text-aqua">{formattedPrice}</p>
+            <div className="flex items-baseline gap-2">
+              <p className={`text-3xl font-bold ${isSoldOut ? "text-muted-foreground" : "text-aqua"}`}>
+                {formattedPrice}
+              </p>
+              {formattedComparePrice && (
+                <p className="text-xl text-muted-foreground line-through">
+                  {formattedComparePrice}
+                </p>
+              )}
+            </div>
+
+            {/* Stock status text */}
+            {product.inventoryStatus === "low-stock" && (
+              <p className="text-sm font-medium text-amber-500">
+                Hurry — limited stock remaining
+              </p>
+            )}
+            {isSoldOut && (
+              <p className="text-sm font-medium text-red-500">
+                This product is currently out of stock
+              </p>
+            )}
           </div>
 
           <p className="text-muted-foreground">{product.description}</p>
@@ -169,6 +213,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
           )}
         </div>
       </div>
+
+      {/* Tank-Mate Compatibility */}
+      <TankMates product={product} allProducts={allProducts} />
+
+      {/* Product Recommendations */}
+      <ProductRecommendations product={product} allProducts={allProducts} />
     </div>
   );
 }

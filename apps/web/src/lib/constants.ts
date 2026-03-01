@@ -10,6 +10,23 @@ export const SHOPIFY_API_VERSION = "2024-10";
 /** Product grid defaults */
 export const PRODUCTS_PER_PAGE = 12;
 
+/** Inventory thresholds */
+/** Show "Low Stock" badge when total quantity is at or below this value */
+export const LOW_STOCK_THRESHOLD = 5;
+/** Show exact "Only X left" count when total quantity is at or below this value */
+export const SHOW_EXACT_COUNT_THRESHOLD = 3;
+
+/** Tag used to identify best-selling products */
+export const BEST_SELLER_TAG = "best-seller";
+
+/** Number of recommended products to show on product pages */
+export const RECOMMENDATION_COUNT = 4;
+/** Scoring weights for product recommendations */
+export const RECOMMENDATION_SAME_TYPE_SCORE = 3;
+export const RECOMMENDATION_SHARED_TAG_SCORE = 1;
+export const RECOMMENDATION_SAME_WATER_TYPE_SCORE = 2;
+export const RECOMMENDATION_SAME_VENDOR_SCORE = 1;
+
 /** Amazon affiliate tag */
 export const AMAZON_ASSOCIATE_TAG =
   process.env.AMAZON_ASSOCIATE_TAG ?? "aquaautomate-20";
@@ -23,9 +40,10 @@ export const REVALIDATE_SECONDS = 300;
 /** Navigation links */
 export const NAV_LINKS = [
   { label: "Shop", href: "/collections" },
+  { label: "Plants", href: "/collections/live-plants" },
+  { label: "Driftwood", href: "/collections/driftwood" },
   { label: "Guides", href: "/guides" },
   { label: "Automation", href: "/guides?category=automation" },
-  { label: "Species", href: "/guides?category=species" },
 ] as const;
 
 /** Product categories */

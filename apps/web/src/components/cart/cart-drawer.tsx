@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCart } from "./cart-context";
 import { createCheckout } from "@/app/actions/cart";
+import { trackBeginCheckout } from "@/lib/analytics/events";
 
 interface CartDrawerProps {
   open: boolean;
@@ -25,6 +26,14 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
   async function handleCheckout() {
     setCheckingOut(true);
+
+    /* Track begin_checkout before redirecting */
+    const total = items.reduce(
+      (sum, item) => sum + Number(item.product.price.amount) * item.quantity,
+      0
+    );
+    trackBeginCheckout(total);
+
     try {
       const lines = items.map((item) => ({
         merchandiseId: item.variantId,

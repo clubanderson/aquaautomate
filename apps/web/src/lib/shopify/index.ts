@@ -2,6 +2,7 @@ import { PRODUCTS_PER_PAGE } from "@/lib/constants";
 import { shopifyFetch } from "./storefront";
 import {
   GET_PRODUCTS_QUERY,
+  GET_BEST_SELLERS_QUERY,
   GET_PRODUCT_BY_HANDLE_QUERY,
   GET_COLLECTIONS_QUERY,
   GET_COLLECTION_BY_HANDLE_QUERY,
@@ -65,6 +66,21 @@ export async function getAllProducts(): Promise<ShopifyProduct[]> {
   }
 
   return all;
+}
+
+/** Number of best-selling products to fetch */
+const BEST_SELLERS_COUNT = 8;
+
+export async function getBestSellers(
+  count: number = BEST_SELLERS_COUNT
+): Promise<ShopifyProduct[]> {
+  const data = await shopifyFetch<{
+    products: { edges: { node: ShopifyProduct }[] };
+  }>({
+    query: GET_BEST_SELLERS_QUERY,
+    variables: { first: count },
+  });
+  return (data.products?.edges ?? []).map((e) => e.node);
 }
 
 export async function getProductByHandle(

@@ -18,6 +18,9 @@ export interface ProductImage {
   height?: number;
 }
 
+/** Inventory availability status derived from Shopify data */
+export type InventoryStatus = "in-stock" | "low-stock" | "sold-out";
+
 /** Product variant (size, color, etc.) */
 export interface NormalizedVariant {
   id: string;
@@ -26,6 +29,7 @@ export interface NormalizedVariant {
   price: ProductPrice;
   compareAtPrice?: ProductPrice;
   image?: ProductImage;
+  quantityAvailable?: number | null;
 }
 
 /**
@@ -59,6 +63,10 @@ export interface NormalizedProduct {
   automationCompatible?: boolean;
   /** Freshwater / Saltwater / Both */
   waterType?: "freshwater" | "saltwater" | "both";
+  /** Sum of all variant quantities (null if inventory tracking unavailable) */
+  totalQuantity?: number | null;
+  /** Derived inventory status: in-stock, low-stock, or sold-out */
+  inventoryStatus?: InventoryStatus;
 }
 
 /** Cart line item */

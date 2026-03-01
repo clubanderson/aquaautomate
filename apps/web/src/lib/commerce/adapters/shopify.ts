@@ -1,5 +1,6 @@
 import type { ShopifyProduct, ShopifyCollection } from "@/lib/shopify/types";
-import type { NormalizedProduct, NormalizedCollection } from "../types";
+import type { NormalizedProduct, NormalizedCollection, InventoryStatus } from "../types";
+import { LOW_STOCK_THRESHOLD } from "@/lib/constants";
 
 /** Convert a Shopify product to the unified NormalizedProduct shape */
 export function normalizeShopifyProduct(
@@ -26,7 +27,22 @@ export function normalizeShopifyProduct(
           height: e.node.image.height,
         }
       : undefined,
+    quantityAvailable: e.node.quantityAvailable,
   }));
+
+  /* Compute aggregate inventory from variant quantities */
+  const hasQuantityData = variants.some((v) => v.quantityAvailable != null);
+  const totalQuantity = hasQuantityData
+    ? variants.reduce((sum, v) => sum + (v.quantityAvailable ?? 0), 0)
+    : null;
+
+  const inventoryStatus: InventoryStatus = !product.availableForSale
+    ? "sold-out"
+    : totalQuantity !== null && totalQuantity <= 0
+      ? "sold-out"
+      : totalQuantity !== null && totalQuantity <= LOW_STOCK_THRESHOLD
+        ? "low-stock"
+        : "in-stock";
 
   return {
     id: product.id,
@@ -58,6 +74,8 @@ export function normalizeShopifyProduct(
     sourceLabel: product.vendor
       ? `From ${product.vendor}`
       : "Shopify Store",
+    totalQuantity,
+    inventoryStatus,
   };
 }
 
