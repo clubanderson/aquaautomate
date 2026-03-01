@@ -36,13 +36,20 @@ export function normalizeShopifyProduct(
     ? variants.reduce((sum, v) => sum + (v.quantityAvailable ?? 0), 0)
     : null;
 
-  const inventoryStatus: InventoryStatus = !product.availableForSale
-    ? "sold-out"
-    : totalQuantity !== null && totalQuantity <= 0
-      ? "sold-out"
-      : totalQuantity !== null && totalQuantity <= LOW_STOCK_THRESHOLD
-        ? "low-stock"
-        : "in-stock";
+  /* availableForSale is the authoritative sold-out signal from Shopify.
+     quantityAvailable may be 0 or null for Collective products where
+     inventory tracking isn't synced — only use it for low-stock hints
+     when Shopify confirms the product is actually available. */
+  let inventoryStatus: InventoryStatus = "in-stock";
+  if (!product.availableForSale) {
+    inventoryStatus = "sold-out";
+  } else if (
+    totalQuantity !== null &&
+    totalQuantity > 0 &&
+    totalQuantity <= LOW_STOCK_THRESHOLD
+  ) {
+    inventoryStatus = "low-stock";
+  }
 
   return {
     id: product.id,
@@ -66,10 +73,16 @@ export function normalizeShopifyProduct(
       : images[0],
     variants,
     price: product.priceRange.minVariantPrice,
-    compareAtPrice:
-      product.compareAtPriceRange?.minVariantPrice?.amount !== "0.0"
+    compareAtPrice: (() => {
+      const compareAmt = parseFloat(
+        product.compareAtPriceRange?.minVariantPrice?.amount ?? "0"
+      );
+      const priceAmt = parseFloat(product.priceRange.minVariantPrice.amount);
+      /* Only set compareAtPrice when it's non-zero AND higher than the current price */
+      return compareAmt > 0 && compareAmt > priceAmt
         ? product.compareAtPriceRange.minVariantPrice
-        : undefined,
+        : undefined;
+    })(),
     availableForSale: product.availableForSale,
     sourceLabel: product.vendor
       ? `From ${product.vendor}`

@@ -204,7 +204,7 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold">{collection.title}</h2>
             <Link
-              href={`/collections/${collection.handle}`}
+              href={`/collections?cat=${encodeURIComponent(collection.products[0]?.productType || collection.handle)}`}
               className="inline-flex items-center text-sm text-aqua hover:underline"
             >
               View all

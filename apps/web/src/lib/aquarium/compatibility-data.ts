@@ -8,7 +8,7 @@ export const SPECIES_PROFILES: SpeciesProfile[] = [
   {
     species: "Neon Tetra",
     scientificName: "Paracheirodon innesi",
-    matchKeywords: ["neon tetra", "neon", "tetra"],
+    matchKeywords: ["neon tetra"],
     temperament: "peaceful",
     waterParams: { tempMinF: 70, tempMaxF: 81, phMin: 6.0, phMax: 7.0 },
     minTankGallons: 10,
@@ -158,6 +158,97 @@ export const SPECIES_PROFILES: SpeciesProfile[] = [
     minTankGallons: 5,
     swimLevel: "bottom",
   },
+  /* Additional species matching actual store products */
+  {
+    species: "Tiger Barb",
+    scientificName: "Puntigrus tetrazona",
+    matchKeywords: ["tiger barb", "blushing tiger barb"],
+    temperament: "semi-aggressive",
+    waterParams: { tempMinF: 74, tempMaxF: 82, phMin: 6.0, phMax: 8.0 },
+    minTankGallons: 20,
+    swimLevel: "mid",
+  },
+  {
+    species: "Danio",
+    scientificName: "Danio spp.",
+    matchKeywords: ["danio", "zebra danio", "leopard danio", "giant danio"],
+    temperament: "peaceful",
+    waterParams: { tempMinF: 64, tempMaxF: 78, phMin: 6.5, phMax: 7.5 },
+    minTankGallons: 10,
+    swimLevel: "top",
+  },
+  {
+    species: "Rainbowfish",
+    scientificName: "Melanotaeniidae spp.",
+    matchKeywords: ["rainbowfish", "rainbow", "boesemani", "threadfin"],
+    temperament: "peaceful",
+    waterParams: { tempMinF: 72, tempMaxF: 82, phMin: 6.5, phMax: 8.0 },
+    minTankGallons: 30,
+    swimLevel: "mid",
+  },
+  {
+    species: "Clown Loach",
+    scientificName: "Chromobotia macracanthus",
+    matchKeywords: ["clown loach", "loach", "yoyo loach", "pakistani loach"],
+    temperament: "peaceful",
+    waterParams: { tempMinF: 77, tempMaxF: 86, phMin: 6.0, phMax: 7.5 },
+    minTankGallons: 75,
+    swimLevel: "bottom",
+  },
+  {
+    species: "African Cichlid",
+    scientificName: "Various (Mbuna, Peacock, Hap)",
+    matchKeywords: ["african cichlid", "cichlid ob", "jewel cichlid", "jewel fish", "buffalo head cichlid"],
+    temperament: "semi-aggressive",
+    waterParams: { tempMinF: 76, tempMaxF: 82, phMin: 7.8, phMax: 8.6 },
+    minTankGallons: 55,
+    swimLevel: "mid",
+  },
+  {
+    species: "American Cichlid",
+    scientificName: "Various (Geophagus, Convict, etc.)",
+    matchKeywords: ["american cichlid", "convict", "jack dempsey", "green terror", "acara", "geophagus", "managuensis"],
+    temperament: "semi-aggressive",
+    waterParams: { tempMinF: 72, tempMaxF: 82, phMin: 6.0, phMax: 7.5 },
+    minTankGallons: 40,
+    swimLevel: "mid",
+  },
+  {
+    species: "Knifefish",
+    scientificName: "Various (Chitala, Xenomystus)",
+    matchKeywords: ["knifefish", "knife fish", "clown knife"],
+    temperament: "semi-aggressive",
+    waterParams: { tempMinF: 75, tempMaxF: 82, phMin: 6.0, phMax: 7.0 },
+    minTankGallons: 100,
+    swimLevel: "bottom",
+  },
+  {
+    species: "Goldfish",
+    scientificName: "Carassius auratus",
+    matchKeywords: ["goldfish", "oranda", "ryukin", "ranchu"],
+    temperament: "peaceful",
+    waterParams: { tempMinF: 60, tempMaxF: 74, phMin: 6.5, phMax: 7.5 },
+    minTankGallons: 20,
+    swimLevel: "mid",
+  },
+  {
+    species: "Puffer",
+    scientificName: "Various (Tetraodon, Dichotomyctere)",
+    matchKeywords: ["puffer", "figure eight puffer"],
+    temperament: "semi-aggressive",
+    waterParams: { tempMinF: 74, tempMaxF: 82, phMin: 7.0, phMax: 8.0 },
+    minTankGallons: 30,
+    swimLevel: "mid",
+  },
+  {
+    species: "Catfish",
+    scientificName: "Various (Synodontis, Pimelodus)",
+    matchKeywords: ["catfish", "bumblebee catfish", "pictus catfish"],
+    temperament: "peaceful",
+    waterParams: { tempMinF: 72, tempMaxF: 82, phMin: 6.0, phMax: 7.5 },
+    minTankGallons: 30,
+    swimLevel: "bottom",
+  },
 ];
 
 /**
@@ -191,6 +282,34 @@ export const COMPATIBILITY_RULES: CompatibilityRule[] = [
   { speciesA: "Cherry Barb", speciesB: "Corydoras", compatibility: "compatible", note: "Both peaceful and prefer similar water conditions." },
   { speciesA: "Harlequin Rasbora", speciesB: "Neon Tetra", compatibility: "compatible", note: "Both are peaceful schooling fish that mix well." },
   { speciesA: "Bristlenose Pleco", speciesB: "Corydoras", compatibility: "compatible", note: "Both are peaceful bottom-dwellers. Provide enough space." },
+
+  /* Tiger Barb interactions */
+  { speciesA: "Tiger Barb", speciesB: "Angelfish", compatibility: "incompatible", note: "Tiger barbs are notorious fin nippers — they will shred angelfish fins." },
+  { speciesA: "Tiger Barb", speciesB: "Betta", compatibility: "incompatible", note: "Tiger barbs will relentlessly nip at betta fins." },
+  { speciesA: "Tiger Barb", speciesB: "Guppy", compatibility: "incompatible", note: "Tiger barbs will nip guppy fins. Keep with short-finned species instead." },
+  { speciesA: "Tiger Barb", speciesB: "Cherry Barb", compatibility: "compatible", note: "Both barbs — cherry barbs are peaceful and usually left alone in a large group." },
+  { speciesA: "Tiger Barb", speciesB: "Clown Loach", compatibility: "compatible", note: "Classic pairing. Clown loaches are too large and fast for tiger barbs to bother." },
+
+  /* Cichlid interactions */
+  { speciesA: "African Cichlid", speciesB: "Neon Tetra", compatibility: "incompatible", note: "African cichlids will eat small tetras. Only keep with similar-sized cichlids." },
+  { speciesA: "African Cichlid", speciesB: "Cherry Shrimp", compatibility: "incompatible", note: "Cichlids will eat shrimp. Never combine." },
+  { speciesA: "African Cichlid", speciesB: "American Cichlid", compatibility: "incompatible", note: "Different water requirements (alkaline vs neutral) — do not mix." },
+  { speciesA: "American Cichlid", speciesB: "Neon Tetra", compatibility: "incompatible", note: "Most American cichlids will eat small tetras." },
+  { speciesA: "American Cichlid", speciesB: "Cherry Shrimp", compatibility: "incompatible", note: "Cichlids will eat shrimp on sight." },
+
+  /* Goldfish interactions */
+  { speciesA: "Goldfish", speciesB: "Neon Tetra", compatibility: "incompatible", note: "Goldfish are coldwater, tetras are tropical — incompatible temperatures." },
+  { speciesA: "Goldfish", speciesB: "Betta", compatibility: "incompatible", note: "Different temperature needs and bettas may be harassed." },
+  { speciesA: "Goldfish", speciesB: "Corydoras", compatibility: "caution", note: "Temperature overlap is narrow. Goldfish may outcompete corys for food." },
+
+  /* Puffer interactions */
+  { speciesA: "Puffer", speciesB: "Cherry Shrimp", compatibility: "incompatible", note: "Puffers eat invertebrates — shrimp are food, not tank mates." },
+  { speciesA: "Puffer", speciesB: "Nerite Snail", compatibility: "incompatible", note: "Puffers eat snails — it's part of their diet." },
+  { speciesA: "Puffer", speciesB: "Neon Tetra", compatibility: "caution", note: "Some puffers may nip at small fish. Species-dependent." },
+
+  /* Knifefish interactions */
+  { speciesA: "Knifefish", speciesB: "Cherry Shrimp", compatibility: "incompatible", note: "Knifefish are predatory and will eat small shrimp." },
+  { speciesA: "Knifefish", speciesB: "Neon Tetra", compatibility: "incompatible", note: "Knifefish will eat any fish small enough to fit in their mouth." },
 ];
 
 /**

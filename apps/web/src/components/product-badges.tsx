@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge";
-import { isOnSale } from "@/lib/commerce/utils";
 import { BEST_SELLER_TAG, SHOW_EXACT_COUNT_THRESHOLD } from "@/lib/constants";
 import type { NormalizedProduct } from "@/lib/commerce/types";
 
@@ -52,17 +51,9 @@ export function ProductBadges({
     }
   }
 
-  /* Sale */
-  if (isOnSale(product)) {
-    badges.push(
-      <Badge
-        key="sale"
-        className="bg-coral text-white border-coral"
-      >
-        Sale
-      </Badge>
-    );
-  }
+  /* Sale badge intentionally removed — Shopify Collective suppliers
+     set compare-at prices as MSRP on all products, making the badge
+     appear on every item. Crossed-out compare prices still display. */
 
   /* Best Seller */
   if ((product.tags || []).includes(BEST_SELLER_TAG)) {
