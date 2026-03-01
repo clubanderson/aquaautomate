@@ -44,7 +44,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col sm:max-w-md">
+      <SheetContent className="flex w-3/4 flex-col overflow-x-hidden sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-aqua" />
@@ -66,7 +66,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
           </div>
         ) : (
           <>
-            <ScrollArea className="flex-1 py-4">
+            <ScrollArea className="flex-1 px-4 py-4">
               <div className="space-y-4">
                 {items.map((item) => {
                   const price = new Intl.NumberFormat("en-US", {
@@ -151,7 +151,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
               </div>
             </ScrollArea>
 
-            <div className="space-y-4 border-t border-border/50 pt-4">
+            <div className="space-y-4 border-t border-border/50 px-4 pt-4 pb-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Subtotal</span>
                 <span className="text-lg font-bold text-aqua">{subtotal}</span>

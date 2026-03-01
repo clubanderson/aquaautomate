@@ -145,218 +145,98 @@ export const GET_COLLECTION_BY_HANDLE_QUERY = `
   }
 `;
 
-export const CREATE_CART_MUTATION = `
-  mutation CreateCart($lines: [CartLineInput!]!) {
-    cartCreate(input: { lines: $lines }) {
-      cart {
-        id
-        checkoutUrl
-        totalQuantity
-        lines(first: 100) {
-          edges {
-            node {
+/** Lightweight cart fragment — avoids needing the full ProductFields fragment */
+const CART_FIELDS = `
+  fragment CartFields on Cart {
+    id
+    checkoutUrl
+    totalQuantity
+    lines(first: 100) {
+      edges {
+        node {
+          id
+          quantity
+          merchandise {
+            ... on ProductVariant {
               id
-              quantity
-              merchandise {
-                ... on ProductVariant {
-                  id
-                  title
-                  price {
-                    amount
-                    currencyCode
-                  }
-                  image {
-                    url
-                    altText
-                    width
-                    height
-                  }
-                  product {
-                    ...ProductFields
-                  }
+              title
+              price {
+                amount
+                currencyCode
+              }
+              image {
+                url
+                altText
+                width
+                height
+              }
+              product {
+                handle
+                title
+                featuredImage {
+                  url
+                  altText
+                  width
+                  height
                 }
               }
             }
           }
         }
-        cost {
-          subtotalAmount {
-            amount
-            currencyCode
-          }
-          totalAmount {
-            amount
-            currencyCode
-          }
-        }
+      }
+    }
+    cost {
+      subtotalAmount {
+        amount
+        currencyCode
+      }
+      totalAmount {
+        amount
+        currencyCode
+      }
+    }
+  }
+`;
+
+export const CREATE_CART_MUTATION = `
+  ${CART_FIELDS}
+  mutation CreateCart($lines: [CartLineInput!]!) {
+    cartCreate(input: { lines: $lines }) {
+      cart {
+        ...CartFields
       }
     }
   }
 `;
 
 export const ADD_TO_CART_MUTATION = `
+  ${CART_FIELDS}
   mutation AddToCart($cartId: ID!, $lines: [CartLineInput!]!) {
     cartLinesAdd(cartId: $cartId, lines: $lines) {
       cart {
-        id
-        checkoutUrl
-        totalQuantity
-        lines(first: 100) {
-          edges {
-            node {
-              id
-              quantity
-              merchandise {
-                ... on ProductVariant {
-                  id
-                  title
-                  price {
-                    amount
-                    currencyCode
-                  }
-                  image {
-                    url
-                    altText
-                    width
-                    height
-                  }
-                  product {
-                    handle
-                    title
-                    featuredImage {
-                      url
-                      altText
-                      width
-                      height
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-        cost {
-          subtotalAmount {
-            amount
-            currencyCode
-          }
-          totalAmount {
-            amount
-            currencyCode
-          }
-        }
+        ...CartFields
       }
     }
   }
 `;
 
 export const UPDATE_CART_LINES_MUTATION = `
+  ${CART_FIELDS}
   mutation UpdateCartLines($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
     cartLinesUpdate(cartId: $cartId, lines: $lines) {
       cart {
-        id
-        checkoutUrl
-        totalQuantity
-        lines(first: 100) {
-          edges {
-            node {
-              id
-              quantity
-              merchandise {
-                ... on ProductVariant {
-                  id
-                  title
-                  price {
-                    amount
-                    currencyCode
-                  }
-                  image {
-                    url
-                    altText
-                    width
-                    height
-                  }
-                  product {
-                    handle
-                    title
-                    featuredImage {
-                      url
-                      altText
-                      width
-                      height
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-        cost {
-          subtotalAmount {
-            amount
-            currencyCode
-          }
-          totalAmount {
-            amount
-            currencyCode
-          }
-        }
+        ...CartFields
       }
     }
   }
 `;
 
 export const REMOVE_FROM_CART_MUTATION = `
+  ${CART_FIELDS}
   mutation RemoveFromCart($cartId: ID!, $lineIds: [ID!]!) {
     cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
       cart {
-        id
-        checkoutUrl
-        totalQuantity
-        lines(first: 100) {
-          edges {
-            node {
-              id
-              quantity
-              merchandise {
-                ... on ProductVariant {
-                  id
-                  title
-                  price {
-                    amount
-                    currencyCode
-                  }
-                  image {
-                    url
-                    altText
-                    width
-                    height
-                  }
-                  product {
-                    handle
-                    title
-                    featuredImage {
-                      url
-                      altText
-                      width
-                      height
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-        cost {
-          subtotalAmount {
-            amount
-            currencyCode
-          }
-          totalAmount {
-            amount
-            currencyCode
-          }
-        }
+        ...CartFields
       }
     }
   }

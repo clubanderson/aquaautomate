@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SourceBadge } from "@/components/source-badge";
+import { useCart } from "@/components/cart/cart-context";
 import type { NormalizedProduct } from "@/lib/commerce/types";
 
 /** Fallback gradient shown when no product image is available */
@@ -19,6 +20,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+  const { addItem } = useCart();
   const formattedPrice = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: product.price.currencyCode,
@@ -121,7 +123,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               className="bg-aqua text-deep-blue hover:bg-aqua-dim"
               onClick={(e) => {
                 e.preventDefault();
-                onAddToCart?.(product);
+                if (onAddToCart) {
+                  onAddToCart(product);
+                } else {
+                  addItem(product);
+                }
               }}
             >
               <ShoppingCart className="mr-1 h-3 w-3" />
