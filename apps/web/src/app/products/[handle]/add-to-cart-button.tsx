@@ -12,6 +12,7 @@ interface AddToCartButtonProps {
 export function AddToCartButton({ product }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const isAmazon = product.source === "amazon";
+  const isSoldOut = product.inventoryStatus === "sold-out";
 
   if (isAmazon) {
     return (
@@ -29,6 +30,14 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
           <ExternalLink className="mr-2 h-4 w-4" />
           Buy on Amazon
         </a>
+      </Button>
+    );
+  }
+
+  if (isSoldOut) {
+    return (
+      <Button size="lg" className="w-full opacity-50" disabled>
+        Sold Out
       </Button>
     );
   }

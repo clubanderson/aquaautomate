@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ShoppingCart, Menu, X, Droplets } from "lucide-react";
+import { ShoppingCart, Menu, X, Droplets, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NAV_LINKS } from "@/lib/constants";
 import { useCart } from "@/components/cart/cart-context";
 import { CartDrawer } from "@/components/cart/cart-drawer";
+import { SearchBar } from "@/components/search/search-bar";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -41,6 +42,23 @@ export function Header() {
 
           {/* Right actions */}
           <div className="flex items-center gap-2">
+            {/* Desktop search */}
+            <div className="hidden md:block">
+              <SearchBar />
+            </div>
+
+            {/* Mobile search icon — links to search page */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              asChild
+            >
+              <Link href="/search" aria-label="Search">
+                <Search className="h-5 w-5" />
+              </Link>
+            </Button>
+
             {/* Cart button */}
             <Button
               variant="ghost"

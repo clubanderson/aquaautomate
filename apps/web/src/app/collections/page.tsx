@@ -3,11 +3,16 @@ export const revalidate = 60;
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 import { DEMO_COLLECTIONS } from "@/lib/commerce/demo-data";
 import { getAllProducts, getCollections } from "@/lib/shopify";
 import { normalizeShopifyCollection, normalizeShopifyProduct } from "@/lib/commerce/adapters/shopify";
 import { ProductGrid } from "@/components/product-grid";
+import { parseFilters, applyFilters, extractFacets } from "@/lib/commerce/filters";
+import { FilterSidebar } from "@/components/filters/filter-sidebar";
+import { ActiveFilters } from "@/components/filters/active-filters";
+import { MobileFilterTrigger } from "@/components/filters/mobile-filter-trigger";
 import type { NormalizedProduct, NormalizedCollection } from "@/lib/commerce/types";
 
 export const metadata: Metadata = {
@@ -48,6 +53,11 @@ const PRODUCT_TYPE_LABELS: Record<string, string> = {
   KOI: "Koi",
   AROWANA: "Arowanas",
   MISCELLANEOUS: "Miscellaneous",
+  /* Phase 6: Plants & Driftwood */
+  DRIFTWOOD: "Driftwood",
+  "LIVE PLANTS": "Live Plants",
+  PLANTS: "Plants",
+  "LIVE PLANT": "Live Plants",
 };
 
 /** Minimum products in a type to show as its own section */
@@ -79,8 +89,24 @@ function groupProductsByType(products: NormalizedProduct[]): NormalizedCollectio
     }));
 }
 
-export default async function CollectionsPage() {
+interface CollectionsPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function CollectionsPage({ searchParams }: CollectionsPageProps) {
+  const rawParams = await searchParams;
+  const filters = parseFilters(rawParams);
+  const hasActiveFilters =
+    filters.categories.length > 0 ||
+    filters.waterTypes.length > 0 ||
+    filters.priceMin !== undefined ||
+    filters.priceMax !== undefined ||
+    filters.availability !== "all" ||
+    filters.sort !== "relevance" ||
+    !!filters.q;
+
   let collections: NormalizedCollection[] = DEMO_COLLECTIONS;
+  let allProducts: NormalizedProduct[] = [];
 
   try {
     /* Try real Shopify collections first */
@@ -95,10 +121,72 @@ export default async function CollectionsPage() {
       if (shopifyProducts.length > 0) {
         const normalized = shopifyProducts.map(normalizeShopifyProduct);
         collections = groupProductsByType(normalized);
+        allProducts = normalized;
       }
+    }
+
+    /* Collect all products for filtering */
+    if (allProducts.length === 0) {
+      allProducts = collections.flatMap((c) => c.products);
     }
   } catch {
     /* Shopify unavailable — use demo data */
+    allProducts = collections.flatMap((c) => c.products);
+  }
+
+  /* Deduplicate products */
+  const seen = new Set<string>();
+  const uniqueProducts: NormalizedProduct[] = [];
+  for (const p of allProducts) {
+    if (!seen.has(p.id)) {
+      seen.add(p.id);
+      uniqueProducts.push(p);
+    }
+  }
+
+  const filteredProducts = applyFilters(uniqueProducts, filters);
+  const facets = extractFacets(uniqueProducts);
+
+  /* If filters active, show flat filtered grid instead of grouped sections */
+  if (hasActiveFilters) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Shop All Collections</h1>
+            <p className="mt-2 text-muted-foreground">
+              {filteredProducts.length} product{filteredProducts.length === 1 ? "" : "s"} found
+            </p>
+          </div>
+          <Suspense>
+            <MobileFilterTrigger
+              filters={filters}
+              categoryFacets={facets.categories}
+              waterTypeFacets={facets.waterTypes}
+              totalResults={filteredProducts.length}
+            />
+          </Suspense>
+        </div>
+
+        <Suspense>
+          <ActiveFilters filters={filters} />
+        </Suspense>
+
+        <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[240px_1fr]">
+          <div className="hidden lg:block">
+            <Suspense>
+              <FilterSidebar
+                filters={filters}
+                categoryFacets={facets.categories}
+                waterTypeFacets={facets.waterTypes}
+                totalResults={filteredProducts.length}
+              />
+            </Suspense>
+          </div>
+          <ProductGrid products={filteredProducts} />
+        </div>
+      </div>
+    );
   }
 
   return (

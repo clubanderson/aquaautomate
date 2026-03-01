@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import type { NormalizedProduct, CartItem } from "@/lib/commerce/types";
+import { trackAddToCart } from "@/lib/analytics/events";
 
 interface CartContextValue {
   items: CartItem[];
@@ -37,6 +38,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     (product: NormalizedProduct, quantity: number = 1) => {
       // Only Shopify products go in cart; Amazon products link out
       if (product.source === "amazon") return;
+
+      trackAddToCart(product, quantity);
 
       const variantId = product.variants[0]?.id ?? product.id;
 

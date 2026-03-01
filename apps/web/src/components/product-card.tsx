@@ -7,7 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SourceBadge } from "@/components/source-badge";
+import { ProductBadges } from "@/components/product-badges";
 import { useCart } from "@/components/cart/cart-context";
+import { isOnSale } from "@/lib/commerce/utils";
 import type { NormalizedProduct } from "@/lib/commerce/types";
 
 /** Fallback gradient shown when no product image is available */
@@ -21,10 +23,20 @@ interface ProductCardProps {
 
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const { addItem } = useCart();
+  const isSoldOut = product.inventoryStatus === "sold-out";
+
   const formattedPrice = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: product.price.currencyCode,
   }).format(Number(product.price.amount));
+
+  const formattedComparePrice =
+    isOnSale(product) && product.compareAtPrice
+      ? new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: product.compareAtPrice.currencyCode,
+        }).format(Number(product.compareAtPrice.amount))
+      : null;
 
   const isAmazon = product.source === "amazon";
   const href = isAmazon
@@ -44,7 +56,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               src={product.featuredImage.url}
               alt={product.featuredImage.altText}
               fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className={`object-cover transition-transform duration-300 group-hover:scale-105 ${isSoldOut ? "opacity-60 grayscale" : ""}`}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
           ) : (
@@ -62,14 +74,10 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             />
           </div>
 
-          {/* Automation badge */}
-          {product.automationCompatible && (
-            <div className="absolute right-2 top-2">
-              <Badge className="bg-deep-blue/80 text-aqua border-aqua/30">
-                HA Compatible
-              </Badge>
-            </div>
-          )}
+          {/* Product badges (sold out, low stock, sale, best seller, HA) */}
+          <div className="absolute right-2 top-2">
+            <ProductBadges product={product} variant="overlay" />
+          </div>
         </div>
       </Link>
 
@@ -99,7 +107,16 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
         {/* Price + CTA */}
         <div className="flex items-center justify-between pt-1">
-          <span className="text-lg font-bold text-aqua">{formattedPrice}</span>
+          <div className="flex items-baseline gap-1.5">
+            <span className={`text-lg font-bold ${isSoldOut ? "text-muted-foreground" : "text-aqua"}`}>
+              {formattedPrice}
+            </span>
+            {formattedComparePrice && (
+              <span className="text-sm text-muted-foreground line-through">
+                {formattedComparePrice}
+              </span>
+            )}
+          </div>
 
           {isAmazon ? (
             <Button
@@ -116,6 +133,10 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                 <ExternalLink className="mr-1 h-3 w-3" />
                 Buy
               </a>
+            </Button>
+          ) : isSoldOut ? (
+            <Button size="sm" disabled className="opacity-50">
+              Sold Out
             </Button>
           ) : (
             <Button

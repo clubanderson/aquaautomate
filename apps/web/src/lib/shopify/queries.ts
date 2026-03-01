@@ -47,6 +47,7 @@ const PRODUCT_FRAGMENT = `
             width
             height
           }
+          quantityAvailable
           selectedOptions {
             name
             value
@@ -85,6 +86,19 @@ export const GET_PRODUCTS_QUERY = `
       pageInfo {
         hasNextPage
         endCursor
+      }
+    }
+  }
+`;
+
+export const GET_BEST_SELLERS_QUERY = `
+  ${PRODUCT_FRAGMENT}
+  query GetBestSellers($first: Int!) {
+    products(first: $first, sortKey: BEST_SELLING) {
+      edges {
+        node {
+          ...ProductFields
+        }
       }
     }
   }

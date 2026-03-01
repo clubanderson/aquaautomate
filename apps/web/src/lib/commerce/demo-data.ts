@@ -35,9 +35,12 @@ export const DEMO_PRODUCTS: NormalizedProduct[] = [
       },
     ],
     price: { amount: "11.99", currencyCode: "USD" },
+    compareAtPrice: { amount: "15.99", currencyCode: "USD" },
     availableForSale: true,
     sourceLabel: "From Danbury Aquarium",
     waterType: "freshwater",
+    totalQuantity: 24,
+    inventoryStatus: "in-stock",
   },
   {
     id: "demo-2",
@@ -71,6 +74,8 @@ export const DEMO_PRODUCTS: NormalizedProduct[] = [
     price: { amount: "24.99", currencyCode: "USD" },
     availableForSale: true,
     sourceLabel: "From Danbury Aquarium",
+    totalQuantity: 3,
+    inventoryStatus: "low-stock",
   },
   {
     id: "demo-3",
@@ -105,6 +110,8 @@ export const DEMO_PRODUCTS: NormalizedProduct[] = [
     sourceLabel: "Available on Amazon",
     automationCompatible: true,
     waterType: "freshwater",
+    totalQuantity: null,
+    inventoryStatus: "in-stock",
   },
   {
     id: "demo-4",
@@ -138,6 +145,8 @@ export const DEMO_PRODUCTS: NormalizedProduct[] = [
     externalUrl: "https://www.amazon.com/dp/B08XAMPLE?tag=aquaautomate-20",
     sourceLabel: "Available on Amazon",
     automationCompatible: true,
+    totalQuantity: null,
+    inventoryStatus: "in-stock",
   },
   {
     id: "demo-5",
@@ -164,14 +173,16 @@ export const DEMO_PRODUCTS: NormalizedProduct[] = [
       {
         id: "demo-5-v1",
         title: "Single Plant",
-        availableForSale: true,
+        availableForSale: false,
         price: { amount: "7.99", currencyCode: "USD" },
       },
     ],
     price: { amount: "7.99", currencyCode: "USD" },
-    availableForSale: true,
+    availableForSale: false,
     sourceLabel: "From Danbury Aquarium",
     waterType: "freshwater",
+    totalQuantity: 0,
+    inventoryStatus: "sold-out",
   },
   {
     id: "demo-6",
@@ -205,6 +216,8 @@ export const DEMO_PRODUCTS: NormalizedProduct[] = [
     externalUrl: "https://www.amazon.com/dp/B00XAMPLE?tag=aquaautomate-20",
     sourceLabel: "Available on Amazon",
     automationCompatible: true,
+    totalQuantity: null,
+    inventoryStatus: "in-stock",
   },
 ];
 
