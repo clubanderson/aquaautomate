@@ -5,9 +5,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { DEMO_COLLECTIONS } from "@/lib/commerce/demo-data";
-import { getCollections } from "@/lib/shopify";
-import { normalizeShopifyCollection } from "@/lib/commerce/adapters/shopify";
+import { getProducts, getCollections } from "@/lib/shopify";
+import { normalizeShopifyCollection, normalizeShopifyProduct } from "@/lib/commerce/adapters/shopify";
 import { ProductGrid } from "@/components/product-grid";
+import type { NormalizedProduct, NormalizedCollection } from "@/lib/commerce/types";
 
 export const metadata: Metadata = {
   title: "Shop All Collections",
@@ -15,17 +16,88 @@ export const metadata: Metadata = {
     "Browse aquarium fish, plants, hardscape, and automation gear from local shops and Amazon.",
 };
 
+/** Max products to fetch for auto-grouping */
+const MAX_PRODUCTS = 250;
 /** Max collections to fetch from Shopify */
 const MAX_COLLECTIONS = 20;
 
+/** Friendly display names for Shopify product types */
+const PRODUCT_TYPE_LABELS: Record<string, string> = {
+  "AMERICAN CICHLID": "American Cichlids",
+  "AFRICAN CICHLIDS": "African Cichlids",
+  TETRA: "Tetras",
+  CATFISH: "Catfish",
+  BARB: "Barbs",
+  PLECO: "Plecos",
+  DISCUS: "Discus",
+  SHRIMP: "Shrimp",
+  MOLLY: "Mollies",
+  GOURAMI: "Gouramis",
+  CORY: "Corydoras",
+  BETTA: "Bettas",
+  SWORDTAIL: "Swordtails",
+  ANGELFISH: "Angelfish",
+  GOLDFISH: "Goldfish",
+  LOACH: "Loaches",
+  SHARK: "Sharks",
+  PLATY: "Platies",
+  RAINBOW: "Rainbowfish",
+  DANIO: "Danios",
+  GUPPY: "Guppies",
+  SNAIL: "Snails",
+  CRAYFISH: "Crayfish",
+  KNIFEFISH: "Knifefish",
+  KOI: "Koi",
+  AROWANA: "Arowanas",
+  MISCELLANEOUS: "Miscellaneous",
+};
+
+/** Minimum products in a type to show as its own section */
+const MIN_PRODUCTS_PER_GROUP = 2;
+
+/**
+ * Auto-group products by productType into virtual collections.
+ * Used when the Shopify store has no real collections set up.
+ */
+function groupProductsByType(products: NormalizedProduct[]): NormalizedCollection[] {
+  const groups = new Map<string, NormalizedProduct[]>();
+
+  for (const product of products) {
+    const type = product.productType || "MISCELLANEOUS";
+    const existing = groups.get(type) || [];
+    existing.push(product);
+    groups.set(type, existing);
+  }
+
+  return Array.from(groups.entries())
+    .filter(([, prods]) => prods.length >= MIN_PRODUCTS_PER_GROUP)
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([type, prods]) => ({
+      id: `auto-${type.toLowerCase().replace(/\s+/g, "-")}`,
+      handle: type.toLowerCase().replace(/\s+/g, "-"),
+      title: PRODUCT_TYPE_LABELS[type] || type.charAt(0) + type.slice(1).toLowerCase(),
+      description: `${prods.length} products available from Danaqua Live Fish & More`,
+      products: prods,
+    }));
+}
+
 export default async function CollectionsPage() {
-  let collections = DEMO_COLLECTIONS;
+  let collections: NormalizedCollection[] = DEMO_COLLECTIONS;
 
   try {
+    /* Try real Shopify collections first */
     const shopifyCollections = await getCollections(MAX_COLLECTIONS);
     const filtered = shopifyCollections.filter((c) => c.handle !== "frontpage");
+
     if (filtered.length > 0) {
       collections = filtered.map(normalizeShopifyCollection);
+    } else {
+      /* No real collections — auto-group products by type */
+      const shopifyProducts = await getProducts(MAX_PRODUCTS);
+      if (shopifyProducts.length > 0) {
+        const normalized = shopifyProducts.map(normalizeShopifyProduct);
+        collections = groupProductsByType(normalized);
+      }
     }
   } catch {
     /* Shopify unavailable — use demo data */
