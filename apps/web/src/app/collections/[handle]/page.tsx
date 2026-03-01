@@ -1,5 +1,5 @@
-/** Revalidate collection pages every 60 seconds */
-export const revalidate = 60;
+/** Force dynamic rendering — page depends on searchParams for filters */
+export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ProductGrid } from "@/components/product-grid";
 import { DEMO_COLLECTIONS } from "@/lib/commerce/demo-data";
-import { getCollectionByHandle, getCollections } from "@/lib/shopify";
+import { getCollectionByHandle } from "@/lib/shopify";
 import { normalizeShopifyCollection } from "@/lib/commerce/adapters/shopify";
 import { SITE_NAME } from "@/lib/constants";
 import { parseFilters, applyFilters, extractFacets } from "@/lib/commerce/filters";
@@ -46,20 +46,6 @@ export async function generateMetadata({
     title: `${collection.title} | ${SITE_NAME}`,
     description: collection.description,
   };
-}
-
-export async function generateStaticParams() {
-  try {
-    const shopifyCollections = await getCollections();
-    if (shopifyCollections.length > 0) {
-      return shopifyCollections
-        .filter((c) => c.handle !== "frontpage")
-        .map((c) => ({ handle: c.handle }));
-    }
-  } catch {
-    /* Fall back to demo collections */
-  }
-  return DEMO_COLLECTIONS.map((c) => ({ handle: c.handle }));
 }
 
 export default async function CollectionPage({

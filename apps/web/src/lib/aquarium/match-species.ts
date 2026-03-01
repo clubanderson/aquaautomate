@@ -6,10 +6,43 @@ import {
   NON_FISH_COMPATIBILITY,
 } from "./compatibility-data";
 
-/** Match a product to a species profile by checking title and tags against keywords */
+/** Map Shopify productType values to species profile species names */
+const PRODUCT_TYPE_TO_SPECIES: Record<string, string> = {
+  TETRA: "Neon Tetra",
+  MOLLY: "Molly",
+  PLATY: "Platy",
+  SWORDTAIL: "Swordtail",
+  GUPPY: "Guppy",
+  BARB: "Cherry Barb",
+  GOURAMI: "Dwarf Gourami",
+  CORY: "Corydoras",
+  PLECO: "Bristlenose Pleco",
+  SHRIMP: "Cherry Shrimp",
+  SNAIL: "Nerite Snail",
+  DANIO: "Danio",
+  RAINBOW: "Rainbowfish",
+  LOACH: "Clown Loach",
+  CATFISH: "Catfish",
+  ANGELFISH: "Angelfish",
+  KNIFEFISH: "Knifefish",
+  "AFRICAN CICHLIDS": "African Cichlid",
+  "AMERICAN CICHLID": "American Cichlid",
+  GOLDFISH: "Goldfish",
+};
+
+/** Match a product to a species profile by checking productType, title, and tags */
 export function matchProductToSpecies(
   product: NormalizedProduct
 ): SpeciesProfile | null {
+  /* First try matching by productType — most reliable for this store */
+  const productType = (product.productType || "").toUpperCase();
+  const speciesName = PRODUCT_TYPE_TO_SPECIES[productType];
+  if (speciesName) {
+    const profile = SPECIES_PROFILES.find((p) => p.species === speciesName);
+    if (profile) return profile;
+  }
+
+  /* Fallback: check title and tags against keywords */
   const searchText = [
     product.title.toLowerCase(),
     ...(product.tags || []).map((t) => t.toLowerCase()),
