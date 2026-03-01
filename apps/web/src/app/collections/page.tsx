@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { DEMO_COLLECTIONS } from "@/lib/commerce/demo-data";
-import { getProducts, getCollections } from "@/lib/shopify";
+import { getAllProducts, getCollections } from "@/lib/shopify";
 import { normalizeShopifyCollection, normalizeShopifyProduct } from "@/lib/commerce/adapters/shopify";
 import { ProductGrid } from "@/components/product-grid";
 import type { NormalizedProduct, NormalizedCollection } from "@/lib/commerce/types";
@@ -16,8 +16,6 @@ export const metadata: Metadata = {
     "Browse aquarium fish, plants, hardscape, and automation gear from local shops and Amazon.",
 };
 
-/** Max products to fetch for auto-grouping */
-const MAX_PRODUCTS = 250;
 /** Max collections to fetch from Shopify */
 const MAX_COLLECTIONS = 20;
 
@@ -92,8 +90,8 @@ export default async function CollectionsPage() {
     if (filtered.length > 0) {
       collections = filtered.map(normalizeShopifyCollection);
     } else {
-      /* No real collections — auto-group products by type */
-      const shopifyProducts = await getProducts(MAX_PRODUCTS);
+      /* No real collections — auto-group all products by type */
+      const shopifyProducts = await getAllProducts();
       if (shopifyProducts.length > 0) {
         const normalized = shopifyProducts.map(normalizeShopifyProduct);
         collections = groupProductsByType(normalized);

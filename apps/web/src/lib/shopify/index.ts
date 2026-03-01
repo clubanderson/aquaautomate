@@ -16,18 +16,55 @@ import type {
   ShopifyCart,
 } from "./types";
 
+/** Shopify Storefront API max items per request */
+const SHOPIFY_MAX_PER_PAGE = 250;
+
 /* ---------- Products ---------- */
 
 export async function getProducts(
   count: number = PRODUCTS_PER_PAGE
 ): Promise<ShopifyProduct[]> {
   const data = await shopifyFetch<{
-    products: { edges: { node: ShopifyProduct }[] };
+    products: {
+      edges: { node: ShopifyProduct }[];
+      pageInfo: { hasNextPage: boolean; endCursor: string };
+    };
   }>({
     query: GET_PRODUCTS_QUERY,
-    variables: { first: count },
+    variables: { first: Math.min(count, SHOPIFY_MAX_PER_PAGE) },
   });
   return (data.products?.edges ?? []).map((e) => e.node);
+}
+
+interface ProductsResponse {
+  products: {
+    edges: { node: ShopifyProduct }[];
+    pageInfo: { hasNextPage: boolean; endCursor: string };
+  };
+}
+
+/**
+ * Fetch ALL products from Shopify, paginating through results.
+ * Use for pages that need the full catalog (e.g. collections grouped by type).
+ */
+export async function getAllProducts(): Promise<ShopifyProduct[]> {
+  const all: ShopifyProduct[] = [];
+  let cursor: string | null = null;
+  let hasNext = true;
+
+  while (hasNext) {
+    const result: ProductsResponse = await shopifyFetch<ProductsResponse>({
+      query: GET_PRODUCTS_QUERY,
+      variables: { first: SHOPIFY_MAX_PER_PAGE, ...(cursor ? { after: cursor } : {}) },
+    });
+
+    const edges = result.products?.edges ?? [];
+    all.push(...edges.map((e) => e.node));
+    hasNext = result.products?.pageInfo?.hasNextPage ?? false;
+    cursor = result.products?.pageInfo?.endCursor ?? null;
+  }
+
+  return all;
 }
 
 export async function getProductByHandle(
