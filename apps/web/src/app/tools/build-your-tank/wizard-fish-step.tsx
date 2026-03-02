@@ -1,17 +1,21 @@
 "use client";
 
 import { useMemo } from "react";
+import Image from "next/image";
 import {
   ArrowLeft,
   Check,
   ChevronRight,
   Info,
+  Minus,
+  Plus,
   Waves,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { NormalizedProduct } from "@/lib/commerce/types";
 import type { Compatibility } from "@/lib/aquarium/tank-mates";
+import { MIN_FISH_QUANTITY, MAX_FISH_QUANTITY } from "@/lib/constants";
 import {
   groupFishByType,
   getTankMateRecommendations,
@@ -35,6 +39,12 @@ const COMPAT_COLORS: Record<Compatibility, string> = {
   incompatible: "bg-red-600/20 text-red-400 border-red-600/30",
 };
 
+/** Number of thumbnail images to show on type cards */
+const TYPE_CARD_THUMBNAIL_COUNT = 4;
+
+/** Product image thumbnail dimensions */
+const THUMB_SIZE = 48;
+
 /* ── Props ─────────────────────────────────────────────────────────────── */
 
 interface WizardFishStepProps {
@@ -52,6 +62,10 @@ interface WizardFishStepProps {
   activeFishType: string | null;
   /** Set the active drill-down type */
   onSetFishType: (type: string | null) => void;
+  /** Per-fish quantities keyed by product ID */
+  fishQuantities: Record<string, number>;
+  /** Update quantity for a fish product */
+  onSetFishQuantity: (productId: string, quantity: number) => void;
 }
 
 /* ── Component ─────────────────────────────────────────────────────────── */
@@ -64,6 +78,8 @@ export function WizardFishStep({
   onToggleFish,
   activeFishType,
   onSetFishType,
+  fishQuantities,
+  onSetFishQuantity,
 }: WizardFishStepProps) {
   /* Group fish products by type */
   const typeGroups = useMemo(
@@ -89,6 +105,8 @@ export function WizardFishStep({
         selectedFish={selectedFish}
         onToggleFish={onToggleFish}
         onBack={() => onSetFishType(null)}
+        fishQuantities={fishQuantities}
+        onSetFishQuantity={onSetFishQuantity}
       />
     );
   }
@@ -159,6 +177,19 @@ function FishTypeCard({
 }) {
   const allSoldOut = group.availableCount === 0;
 
+  /* Collect up to TYPE_CARD_THUMBNAIL_COUNT unique product images */
+  const thumbnails = useMemo(() => {
+    const imgs: { url: string; alt: string }[] = [];
+    for (const p of group.products) {
+      if (imgs.length >= TYPE_CARD_THUMBNAIL_COUNT) break;
+      const img = p.featuredImage ?? p.images[0];
+      if (img?.url) {
+        imgs.push({ url: img.url, alt: img.altText || p.title });
+      }
+    }
+    return imgs;
+  }, [group.products]);
+
   return (
     <button
       onClick={onClick}
@@ -170,6 +201,26 @@ function FishTypeCard({
             : "border-border/50 bg-card/50 hover:border-aqua/30"
       }`}
     >
+      {/* Thumbnail strip */}
+      {thumbnails.length > 0 && (
+        <div className="mb-3 flex gap-1.5">
+          {thumbnails.map((img, i) => (
+            <div
+              key={i}
+              className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-card/80"
+            >
+              <Image
+                src={img.url}
+                alt={img.alt}
+                width={THUMB_SIZE}
+                height={THUMB_SIZE}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2">
@@ -227,11 +278,15 @@ function FishVarietyDrilldown({
   selectedFish,
   onToggleFish,
   onBack,
+  fishQuantities,
+  onSetFishQuantity,
 }: {
   group: FishTypeGroup;
   selectedFish: NormalizedProduct[];
   onToggleFish: (product: NormalizedProduct) => void;
   onBack: () => void;
+  fishQuantities: Record<string, number>;
+  onSetFishQuantity: (productId: string, quantity: number) => void;
 }) {
   const selectedIds = useMemo(
     () => new Set(selectedFish.map((f) => f.id)),
@@ -280,7 +335,7 @@ function FishVarietyDrilldown({
           )}
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Select as many as you like. Tap to toggle.
+          Select varieties and set quantities. Tap to toggle.
         </p>
       </div>
 
@@ -290,69 +345,121 @@ function FishVarietyDrilldown({
           const selected = selectedIds.has(p.id);
           const soldOut = p.availableForSale === false;
           const compatNotes = getVarietyCompatibilityNotes(p, selectedFish);
+          const productImage = p.featuredImage ?? p.images[0];
+          const quantity = fishQuantities[p.id] ?? 1;
 
           return (
-            <button
+            <div
               key={p.id}
-              onClick={() => !soldOut && onToggleFish(p)}
-              disabled={soldOut}
-              className={`rounded-lg border p-4 text-left transition-all ${
+              className={`rounded-lg border transition-all ${
                 soldOut
-                  ? "cursor-not-allowed border-border/30 bg-card/20 opacity-60"
+                  ? "border-border/30 bg-card/20 opacity-60"
                   : selected
                     ? "border-aqua/50 bg-aqua/5"
                     : "border-border/50 bg-card/50 hover:border-aqua/30"
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{p.title}</p>
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                    {p.description}
-                  </p>
-                </div>
-                {selected && (
-                  <Check className="ml-2 mt-0.5 h-4 w-4 shrink-0 text-aqua" />
-                )}
-              </div>
-
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-sm font-medium text-aqua">
-                  ${p.price.amount}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {soldOut && (
-                    <Badge className="border-red-600/30 bg-red-600/20 text-[10px] text-red-400">
-                      Sold Out
-                    </Badge>
-                  )}
-                  {p.vendor && (
-                    <Badge variant="secondary" className="gap-1 text-[10px]">
-                      {p.vendor}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Compatibility notes with already-selected fish */}
-              {compatNotes.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {compatNotes.map((note) => (
-                    <div
-                      key={note.species}
-                      className="flex items-center gap-1.5 text-[10px]"
-                    >
-                      <Badge className={`px-1.5 py-0 text-[9px] ${COMPAT_COLORS[note.compatibility]}`}>
-                        {note.compatibility === "caution" ? "⚠" : "✕"}
-                      </Badge>
-                      <span className="text-muted-foreground">
-                        {note.note}
-                      </span>
+              {/* Clickable card body */}
+              <button
+                onClick={() => !soldOut && onToggleFish(p)}
+                disabled={soldOut}
+                className={`w-full p-4 text-left ${soldOut ? "cursor-not-allowed" : ""}`}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Product image */}
+                  {productImage?.url && (
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-card/80">
+                      <Image
+                        src={productImage.url}
+                        alt={productImage.altText || p.title}
+                        width={64}
+                        height={64}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
-                  ))}
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between">
+                      <p className="text-sm font-medium">{p.title}</p>
+                      {selected && (
+                        <Check className="ml-2 mt-0.5 h-4 w-4 shrink-0 text-aqua" />
+                      )}
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      {p.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-sm font-medium text-aqua">
+                    ${p.price.amount}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {soldOut && (
+                      <Badge className="border-red-600/30 bg-red-600/20 text-[10px] text-red-400">
+                        Sold Out
+                      </Badge>
+                    )}
+                    {p.vendor && (
+                      <Badge variant="secondary" className="gap-1 text-[10px]">
+                        {p.vendor}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Compatibility notes with already-selected fish */}
+                {compatNotes.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {compatNotes.map((note) => (
+                      <div
+                        key={note.species}
+                        className="flex items-center gap-1.5 text-[10px]"
+                      >
+                        <Badge className={`px-1.5 py-0 text-[9px] ${COMPAT_COLORS[note.compatibility]}`}>
+                          {note.compatibility === "caution" ? "⚠" : "✕"}
+                        </Badge>
+                        <span className="text-muted-foreground">
+                          {note.note}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </button>
+
+              {/* Quantity controls (only when selected) */}
+              {selected && !soldOut && (
+                <div className="border-t border-aqua/20 px-4 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Qty:</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onSetFishQuantity(p.id, quantity - 1)}
+                        disabled={quantity <= MIN_FISH_QUANTITY}
+                        className="flex h-6 w-6 items-center justify-center rounded-md border border-border/50 text-muted-foreground transition-colors hover:border-aqua/30 hover:text-foreground disabled:opacity-40"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="w-8 text-center text-sm font-medium">
+                        {quantity}
+                      </span>
+                      <button
+                        onClick={() => onSetFishQuantity(p.id, quantity + 1)}
+                        disabled={quantity >= MAX_FISH_QUANTITY}
+                        className="flex h-6 w-6 items-center justify-center rounded-md border border-border/50 text-muted-foreground transition-colors hover:border-aqua/30 hover:text-foreground disabled:opacity-40"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <span className="text-xs font-medium text-aqua">
+                      ${(Number(p.price.amount) * quantity).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               )}
-            </button>
+            </div>
           );
         })}
       </div>

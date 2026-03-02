@@ -20,6 +20,8 @@ export interface WizardCartItem {
   stepId: string;
   stepLabel: string;
   product: NormalizedProduct;
+  /** Quantity for this item (fish can have > 1) */
+  quantity: number;
 }
 
 /** Related automation guide */
@@ -66,7 +68,7 @@ export function WizardCartSidebar({
   onSelectStep,
 }: WizardCartSidebarProps) {
   const subtotal = items.reduce(
-    (sum, item) => sum + Number(item.product.price.amount),
+    (sum, item) => sum + Number(item.product.price.amount) * item.quantity,
     0,
   );
 
@@ -75,7 +77,7 @@ export function WizardCartSidebar({
       ? Number(item.product.compareAtPrice.amount)
       : 0;
     const price = Number(item.product.price.amount);
-    return sum + Math.max(0, compare - price);
+    return sum + Math.max(0, compare - price) * item.quantity;
   }, 0);
 
   /** Open all product links — Amazon in new tabs, Shopify in new tabs */
@@ -139,6 +141,9 @@ export function WizardCartSidebar({
                         {item.stepLabel}
                       </Badge>
                       <p className="line-clamp-2 text-xs font-medium leading-snug">
+                        {item.quantity > 1 && (
+                          <span className="mr-1 text-aqua">{item.quantity}×</span>
+                        )}
                         {item.product.title}
                       </p>
                       {/* Vendor attribution */}
@@ -159,8 +164,15 @@ export function WizardCartSidebar({
                     </button>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <span className="text-xs font-medium text-aqua">
-                        {formatPrice(item.product.price.amount)}
+                        {item.quantity > 1
+                          ? `$${(Number(item.product.price.amount) * item.quantity).toFixed(2)}`
+                          : formatPrice(item.product.price.amount)}
                       </span>
+                      {item.quantity > 1 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatPrice(item.product.price.amount)} ea
+                        </span>
+                      )}
                       <div className="flex items-center gap-1">
                         {/* Per-item external link */}
                         <a

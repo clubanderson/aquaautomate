@@ -43,6 +43,13 @@ export const WIZARD_RECOMMENDATION_COUNT = 3;
 /** Maximum tank mate recommendations shown in the fish type grid */
 export const MAX_TANK_MATE_RECOMMENDATIONS = 6;
 
+/** Default quantity when manually selecting a fish in the wizard */
+export const DEFAULT_FISH_QUANTITY = 1;
+/** Minimum fish quantity per species in the wizard */
+export const MIN_FISH_QUANTITY = 1;
+/** Maximum fish quantity per species in the wizard */
+export const MAX_FISH_QUANTITY = 50;
+
 /** Navigation links */
 export const NAV_LINKS = [
   { label: "Shop", href: "/collections" },

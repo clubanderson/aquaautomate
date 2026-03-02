@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getWizardRecommendations } from "@/lib/commerce/wizard-recommendations";
 import { isFishProductType, isProductForStep } from "@/lib/commerce/wizard-product-types";
+import { DEFAULT_FISH_QUANTITY, MIN_FISH_QUANTITY, MAX_FISH_QUANTITY } from "@/lib/constants";
 import type { NormalizedProduct } from "@/lib/commerce/types";
 import {
   WizardCartSidebar,
@@ -264,22 +265,28 @@ const FISH_PARSE_RADIX = 10;
 /** Index of the tank step — wizard skips to here when fish are pre-selected */
 const TANK_STEP_INDEX = 1;
 
+/** A pre-selected fish with its quantity from the calculator URL param */
+interface FishParamMatch {
+  product: NormalizedProduct;
+  quantity: number;
+}
+
 /**
  * Match species names from the calculator URL param to real fish products.
  * URL format: "Neon+Tetra:6,Guppy:3"
- * Matches by checking if the product title contains the species name (case-insensitive).
+ * Returns products with their quantities preserved from the calculator.
  */
 function matchFishFromParam(
   fishParam: string | null,
   allProducts: NormalizedProduct[],
-): NormalizedProduct[] {
+): FishParamMatch[] {
   if (!fishParam) return [];
 
   const fishProducts = allProducts.filter(
     (p) => isFishProductType(p.productType) && p.availableForSale !== false,
   );
 
-  const matched: NormalizedProduct[] = [];
+  const matched: FishParamMatch[] = [];
   const entries = fishParam.split(",");
 
   for (const entry of entries) {
@@ -294,8 +301,8 @@ function matchFishFromParam(
     const match = fishProducts.find(
       (p) => p.title.toLowerCase().includes(speciesLower),
     );
-    if (match && !matched.some((m) => m.id === match.id)) {
-      matched.push(match);
+    if (match && !matched.some((m) => m.product.id === match.id)) {
+      matched.push({ product: match, quantity: count });
     }
   }
 
@@ -318,25 +325,46 @@ export function TankWizard({ products }: TankWizardProps) {
     ? Number(searchParams.get("minGallons"))
     : null;
 
-  /** Fish pre-selected from calculator URL param — matched to real products */
-  const preselectedFish = useMemo(
+  /** Fish pre-selected from calculator URL param — matched to real products with quantities */
+  const preselectedFishMatches = useMemo(
     () => matchFishFromParam(searchParams.get("fish"), products),
     [searchParams, products],
   );
 
-  const hasPreselectedFish = preselectedFish.length > 0;
+  /** Just the products (for selections state) */
+  const preselectedFishProducts = useMemo(
+    () => preselectedFishMatches.map((m) => m.product),
+    [preselectedFishMatches],
+  );
+
+  const hasPreselectedFish = preselectedFishMatches.length > 0;
 
   /** Compute initial selections and step — only once via lazy initializer */
   const buildInitialSelections = useCallback((): WizardSelections => ({
     ...INITIAL_SELECTIONS,
-    fish: preselectedFish,
-  }), [preselectedFish]);
+    fish: preselectedFishProducts,
+  }), [preselectedFishProducts]);
 
   const [currentStep, setCurrentStep] = useState(
     () => hasPreselectedFish ? TANK_STEP_INDEX : 0,
   );
   const [selections, setSelections] = useState<WizardSelections>(buildInitialSelections);
   const [activeFishType, setActiveFishType] = useState<string | null>(null);
+
+  /** Per-fish quantities (keyed by product ID) */
+  const [fishQuantities, setFishQuantities] = useState<Record<string, number>>(() => {
+    const map: Record<string, number> = {};
+    for (const match of preselectedFishMatches) {
+      map[match.product.id] = match.quantity;
+    }
+    return map;
+  });
+
+  /** Update quantity for a specific fish product */
+  const setFishQuantity = (productId: string, quantity: number) => {
+    const clamped = Math.max(MIN_FISH_QUANTITY, Math.min(MAX_FISH_QUANTITY, quantity));
+    setFishQuantities((prev) => ({ ...prev, [productId]: clamped }));
+  };
 
   const step = STEPS[currentStep];
   const isReview = step.id === "review";
@@ -350,6 +378,20 @@ export function TankWizard({ products }: TankWizardProps) {
       const stepId = step.id as "fish";
       const current = prev[stepId];
       const exists = current.some((p) => p.id === product.id);
+      if (!exists) {
+        /* Set default quantity when adding a new fish */
+        setFishQuantities((q) => ({
+          ...q,
+          [product.id]: q[product.id] ?? DEFAULT_FISH_QUANTITY,
+        }));
+      } else {
+        /* Clean up quantity when removing */
+        setFishQuantities((q) => {
+          const next = { ...q };
+          delete next[product.id];
+          return next;
+        });
+      }
       return {
         ...prev,
         [stepId]: exists
@@ -386,6 +428,14 @@ export function TankWizard({ products }: TankWizardProps) {
 
   /** Remove a selection — for fish (multi-select), remove by productId; for others, clear */
   const removeSelection = (stepId: string, productId?: string) => {
+    if (stepId === "fish" && productId) {
+      /* Clean up quantity for removed fish */
+      setFishQuantities((q) => {
+        const next = { ...q };
+        delete next[productId];
+        return next;
+      });
+    }
     setSelections((prev) => {
       if (stepId === "fish" && productId) {
         return {
@@ -471,16 +521,21 @@ export function TankWizard({ products }: TankWizardProps) {
       SELECTABLE_STEPS.reduce<WizardCartItem[]>((acc, s) => {
         const selection = selections[s.id];
         if (Array.isArray(selection)) {
-          /* Multi-select (fish) — each product is a separate cart item */
+          /* Multi-select (fish) — each product with its quantity */
           for (const product of selection) {
-            acc.push({ stepId: s.id, stepLabel: s.label, product });
+            acc.push({
+              stepId: s.id,
+              stepLabel: s.label,
+              product,
+              quantity: fishQuantities[product.id] ?? DEFAULT_FISH_QUANTITY,
+            });
           }
         } else if (selection) {
-          acc.push({ stepId: s.id, stepLabel: s.label, product: selection });
+          acc.push({ stepId: s.id, stepLabel: s.label, product: selection, quantity: 1 });
         }
         return acc;
       }, []),
-    [selections],
+    [selections, fishQuantities],
   );
 
   /* Recommendations for empty steps */
@@ -639,10 +694,12 @@ export function TankWizard({ products }: TankWizardProps) {
                 fishProducts={stepProducts}
                 selectedFish={selections.fish}
                 hasPreselectedFish={hasPreselectedFish}
-                preselectedCount={preselectedFish.length}
+                preselectedCount={preselectedFishProducts.length}
                 onToggleFish={toggleMultiSelectProduct}
                 activeFishType={activeFishType}
                 onSetFishType={setActiveFishType}
+                fishQuantities={fishQuantities}
+                onSetFishQuantity={setFishQuantity}
               />
 
               <div className="flex items-center gap-3">
