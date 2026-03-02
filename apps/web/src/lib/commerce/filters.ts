@@ -64,11 +64,11 @@ export function applyFilters(
 ): NormalizedProduct[] {
   let result = [...products];
 
-  /* Category filter */
+  /* Category filter — normalize to uppercase to match facet keys */
   if (filters.categories.length > 0) {
-    const cats = new Set(filters.categories.map((c) => c.toLowerCase()));
+    const cats = new Set(filters.categories.map((c) => c.toUpperCase()));
     result = result.filter((p) =>
-      cats.has((p.productType || "").toLowerCase())
+      cats.has((p.productType || "").toUpperCase())
     );
   }
 
@@ -129,7 +129,9 @@ export function extractFacets(products: NormalizedProduct[]) {
   const waterTypes = new Map<string, number>();
 
   for (const p of products) {
-    const type = p.productType || "Other";
+    /* Normalize to uppercase so mixed-case variants (e.g. "Plant" vs "PLANTS")
+       merge into a single facet */
+    const type = (p.productType || "Other").toUpperCase();
     categories.set(type, (categories.get(type) || 0) + 1);
 
     if (p.waterType) {

@@ -40,7 +40,7 @@ export const REVALIDATE_SECONDS = 300;
 /** Navigation links */
 export const NAV_LINKS = [
   { label: "Shop", href: "/collections" },
-  { label: "Plants", href: "/collections?cat=LIVE+PLANTS,PLANTS" },
+  { label: "Plants", href: "/collections?cat=LIVE+PLANTS,PLANTS,PLANT,GARDEN+PLANTS,AQUATIC+PLANTS" },
   { label: "Driftwood", href: "/collections?cat=DRIFTWOOD" },
   { label: "Guides", href: "/guides" },
   { label: "Automation", href: "/guides?category=automation" },
