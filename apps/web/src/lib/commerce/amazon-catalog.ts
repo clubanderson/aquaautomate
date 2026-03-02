@@ -21,6 +21,31 @@ import type { NormalizedProduct } from "./types";
 /* ------------------------------------------------------------------ */
 
 const FILTERS: NormalizedProduct[] = [
+  /* --- HOB (Hang-On-Back) Filters — AquaClear line covers 5–110 gal --- */
+  createAmazonProduct({
+    asin: "B000260FUW",
+    title: "AquaClear 20 Power Filter — 5 to 20 Gallon",
+    description:
+      "Compact HOB filter ideal for small tanks. Customizable media basket with foam, carbon, and BioMax. Quiet motor and adjustable flow for nano to 20-gallon setups.",
+    price: "24.99",
+    imageUrl: "https://m.media-amazon.com/images/I/81DlYuymFnL._AC_SL1500_.jpg",
+    vendor: "AquaClear",
+    productType: "FILTER",
+    tags: ["filter", "hob", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B000260FVG",
+    title: "AquaClear 30 Power Filter — 10 to 30 Gallon",
+    description:
+      "Mid-size HOB filter with customizable media basket. Mechanical, chemical, and biological filtration. Perfect for 10- to 30-gallon community tanks.",
+    price: "29.99",
+    imageUrl: "https://m.media-amazon.com/images/I/81DlYuymFnL._AC_SL1500_.jpg",
+    vendor: "AquaClear",
+    productType: "FILTER",
+    tags: ["filter", "hob", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
   createAmazonProduct({
     asin: "B000260FUM",
     title: "AquaClear 50 Power Filter — 20 to 50 Gallon",
@@ -32,6 +57,44 @@ const FILTERS: NormalizedProduct[] = [
     productType: "FILTER",
     tags: ["filter", "hob", "freshwater", "saltwater", "equipment"],
     waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B000260FV6",
+    title: "AquaClear 70 Power Filter — 40 to 70 Gallon",
+    description:
+      "Large HOB filter for medium to large tanks. Oversized media basket handles heavy bioloads. Adjustable flow control and ultra-quiet operation.",
+    price: "44.99",
+    imageUrl: "https://m.media-amazon.com/images/I/81DlYuymFnL._AC_SL1500_.jpg",
+    vendor: "AquaClear",
+    productType: "FILTER",
+    tags: ["filter", "hob", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B000260FVQ",
+    title: "AquaClear 110 Power Filter — 60 to 110 Gallon",
+    description:
+      "The largest AquaClear HOB filter. Massive media capacity for tanks up to 110 gallons. Ideal for heavily stocked cichlid and community tanks.",
+    price: "64.99",
+    imageUrl: "https://m.media-amazon.com/images/I/81DlYuymFnL._AC_SL1500_.jpg",
+    vendor: "AquaClear",
+    productType: "FILTER",
+    tags: ["filter", "hob", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+
+  /* --- Canister Filters — Fluval line covers 10–250 gal --- */
+  createAmazonProduct({
+    asin: "B07JHP8L72",
+    title: "Fluval 107 Performance Canister Filter — Up to 30 Gallon",
+    description:
+      "Entry-level canister filter with multi-stage filtration. Quick-change clamps, virtually silent motor, and self-priming. Great first canister for small tanks.",
+    price: "99.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61mJR7p-ZvL._AC_SL1500_.jpg",
+    vendor: "Fluval",
+    productType: "FILTER",
+    tags: ["filter", "canister", "freshwater", "planted-tank", "equipment"],
+    waterType: "freshwater",
   }),
   createAmazonProduct({
     asin: "B07JHG13WP",
@@ -46,8 +109,46 @@ const FILTERS: NormalizedProduct[] = [
     waterType: "freshwater",
   }),
   createAmazonProduct({
+    asin: "B07JHG3KJP",
+    title: "Fluval 307 Performance Canister Filter — Up to 70 Gallon",
+    description:
+      "Mid-range canister with multi-stage filtration and large media baskets. Quiet motor, instant-release clamps, and aqua-stop valves for easy maintenance.",
+    price: "159.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61mJR7p-ZvL._AC_SL1500_.jpg",
+    vendor: "Fluval",
+    productType: "FILTER",
+    tags: ["filter", "canister", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B07JHG1RGG",
+    title: "Fluval 407 Performance Canister Filter — Up to 100 Gallon",
+    description:
+      "High-capacity canister filter for large tanks. Multi-stage filtration with extra-large media baskets. Handles heavy bioloads with quiet, efficient operation.",
+    price: "199.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61mJR7p-ZvL._AC_SL1500_.jpg",
+    vendor: "Fluval",
+    productType: "FILTER",
+    tags: ["filter", "canister", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B00NHN2DJC",
+    title: "Fluval FX4 High Performance Canister Filter — Up to 250 Gallon",
+    description:
+      "Professional-grade canister filter with smart pump technology. Self-starting, multi-stage filtration, and massive media capacity. Built for large and extra-large aquariums.",
+    price: "279.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61mJR7p-ZvL._AC_SL1500_.jpg",
+    vendor: "Fluval",
+    productType: "FILTER",
+    tags: ["filter", "canister", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+
+  /* --- Sponge Filters — budget-friendly biological filtration --- */
+  createAmazonProduct({
     asin: "B00GOFPX9I",
-    title: "Hikari Bacto-Surge Sponge Filter — Large",
+    title: "Hikari Bacto-Surge Sponge Filter — Up to 40 Gallon",
     description:
       "High-density foam sponge filter powered by air pump. Excellent biological filtration for shrimp tanks, fry tanks, and hospital tanks. Easy to clean.",
     price: "11.99",
@@ -59,7 +160,7 @@ const FILTERS: NormalizedProduct[] = [
   }),
   createAmazonProduct({
     asin: "B00TTBLDXY",
-    title: "Hikari Bacto-Surge Sponge Filter — Mini",
+    title: "Hikari Bacto-Surge Sponge Filter — Up to 10 Gallon",
     description:
       "Compact sponge filter for nano tanks up to 10 gallons. Gentle flow safe for shrimp and fry. Run with any small air pump.",
     price: "6.99",
@@ -76,9 +177,62 @@ const FILTERS: NormalizedProduct[] = [
 /* ------------------------------------------------------------------ */
 
 const HEATERS: NormalizedProduct[] = [
+  /* --- Fluval — budget preset heaters for small tanks + LCD for large --- */
+  createAmazonProduct({
+    asin: "B082GG5FYT",
+    title: "Fluval P 25W Submersible Heater — Up to 6 Gallon",
+    description:
+      "Compact preset heater for nano and small tanks. Slim design fits tight spaces. Fully submersible with auto-shutoff safety. Great for 5-gallon portrait tanks.",
+    price: "12.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61AOPqZZuxL._AC_SL1500_.jpg",
+    vendor: "Fluval",
+    productType: "HEATER",
+    tags: ["heater", "nano", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B082GG1CVJ",
+    title: "Fluval P 50W Submersible Heater — Up to 15 Gallon",
+    description:
+      "Preset heater for small to mid-size tanks. Slim profile, fully submersible, with auto-shutoff. Ideal for 9- and 10-gallon community tanks.",
+    price: "15.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61AOPqZZuxL._AC_SL1500_.jpg",
+    vendor: "Fluval",
+    productType: "HEATER",
+    tags: ["heater", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B001VMSG5Q",
+    title: "Fluval E 100W Electronic Heater — Up to 30 Gallon",
+    description:
+      "Electronic heater with LCD temperature display and dual sensors. Fish guard included. Pair with a Tuya smart plug for HA automation and scheduled heating.",
+    price: "39.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61AOPqZZuxL._AC_SL1500_.jpg",
+    vendor: "Fluval",
+    productType: "HEATER",
+    tags: ["heater", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B001VMSJHK",
+    title: "Fluval E 200W Electronic Heater — Up to 65 Gallon",
+    description:
+      "Advanced electronic heater with LCD display and dual temperature sensors. Fish guard included. Smart-plug compatible for Home Assistant automation.",
+    price: "47.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61AOPqZZuxL._AC_SL1500_.jpg",
+    vendor: "Fluval",
+    productType: "HEATER",
+    tags: ["heater", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
   createAmazonProduct({
     asin: "B001VMSK0I",
-    title: "Fluval E 300W Electronic Heater",
+    title: "Fluval E 300W Electronic Heater — Up to 100 Gallon",
     description:
       "Advanced electronic heater with LCD temperature display and dual temperature sensors. Fish guard included. Pair with a Tuya smart plug for HA automation and scheduled heating.",
     price: "54.99",
@@ -89,9 +243,37 @@ const HEATERS: NormalizedProduct[] = [
     waterType: "both",
     automationCompatible: true,
   }),
+
+  /* --- Eheim Jager — precision German-made, full wattage range --- */
+  createAmazonProduct({
+    asin: "B003HFKFMI",
+    title: "Eheim Jager 50W Aquarium Heater — Up to 15 Gallon",
+    description:
+      "Precision German-made heater with TruTemp dial. Shatter-resistant glass, fully submersible. Use with Tuya/Shelly smart plug for HA temperature scheduling.",
+    price: "22.99",
+    imageUrl: "https://m.media-amazon.com/images/I/617tBxtuJxL._AC_SL1500_.jpg",
+    vendor: "Eheim",
+    productType: "HEATER",
+    tags: ["heater", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B003M7P9YK",
+    title: "Eheim Jager 75W Aquarium Heater — Up to 25 Gallon",
+    description:
+      "Precision German-made heater with TruTemp dial. Shatter-resistant Schott glass, fully submersible. Recalibrating thermostat for consistent temperature.",
+    price: "26.99",
+    imageUrl: "https://m.media-amazon.com/images/I/617tBxtuJxL._AC_SL1500_.jpg",
+    vendor: "Eheim",
+    productType: "HEATER",
+    tags: ["heater", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
   createAmazonProduct({
     asin: "B003M7P9YU",
-    title: "Eheim Jager Aquarium Heater — 150W",
+    title: "Eheim Jager 150W Aquarium Heater — Up to 50 Gallon",
     description:
       "Precision German-made heater with TruTemp dial. Shatter-resistant glass, fully submersible. Use with Tuya/Shelly smart plug for HA temperature scheduling.",
     price: "35.99",
@@ -103,10 +285,90 @@ const HEATERS: NormalizedProduct[] = [
     automationCompatible: true,
   }),
   createAmazonProduct({
-    asin: "B008AGHH8Y",
-    title: "Cobalt Aquatics Neo-Therm Heater — Shatterproof",
+    asin: "B003M7PA0A",
+    title: "Eheim Jager 200W Aquarium Heater — Up to 65 Gallon",
+    description:
+      "German-engineered precision heater for medium-large tanks. TruTemp dial, shatter-resistant Schott glass, fully submersible. Smart-plug compatible.",
+    price: "39.99",
+    imageUrl: "https://m.media-amazon.com/images/I/617tBxtuJxL._AC_SL1500_.jpg",
+    vendor: "Eheim",
+    productType: "HEATER",
+    tags: ["heater", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B003M7PA0K",
+    title: "Eheim Jager 250W Aquarium Heater — Up to 80 Gallon",
+    description:
+      "Large German-made heater with precise thermostat. Shatter-resistant glass, dry-run shutoff, and on/off indicator light. Tuya/Shelly smart-plug compatible.",
+    price: "42.99",
+    imageUrl: "https://m.media-amazon.com/images/I/617tBxtuJxL._AC_SL1500_.jpg",
+    vendor: "Eheim",
+    productType: "HEATER",
+    tags: ["heater", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B003M7PA14",
+    title: "Eheim Jager 300W Aquarium Heater — Up to 105 Gallon",
+    description:
+      "The largest Eheim Jager heater. Precision German engineering with TruTemp dial and dry-run protection. Ideal for tanks 75 to 105 gallons.",
+    price: "47.99",
+    imageUrl: "https://m.media-amazon.com/images/I/617tBxtuJxL._AC_SL1500_.jpg",
+    vendor: "Eheim",
+    productType: "HEATER",
+    tags: ["heater", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+
+  /* --- Cobalt Aquatics Neo-Therm — modern shatterproof design --- */
+  createAmazonProduct({
+    asin: "B00AUVGTXO",
+    title: "Cobalt Aquatics Neo-Therm 25W — Up to 6 Gallon",
+    description:
+      "Flat, modern shatterproof heater with one-touch digital thermostat. LED temperature indicator. Perfect for nano and small tanks.",
+    price: "29.99",
+    imageUrl: "https://m.media-amazon.com/images/I/71nJyHFpt-L._AC_SL1500_.jpg",
+    vendor: "Cobalt Aquatics",
+    productType: "HEATER",
+    tags: ["heater", "nano", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B008AGHH8E",
+    title: "Cobalt Aquatics Neo-Therm 50W — Up to 12 Gallon",
+    description:
+      "Flat shatterproof design with integrated digital thermostat and LED readout. Accurate to ±0.5°F. Pair with a Tuya smart plug for Home Assistant control.",
+    price: "32.99",
+    imageUrl: "https://m.media-amazon.com/images/I/71nJyHFpt-L._AC_SL1500_.jpg",
+    vendor: "Cobalt Aquatics",
+    productType: "HEATER",
+    tags: ["heater", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B008AGHH98",
+    title: "Cobalt Aquatics Neo-Therm 100W — Up to 30 Gallon",
     description:
       "Flat, modern design with one-touch digital thermostat. Shatterproof construction and LED indicator. Pair with a Tuya smart plug for remote on/off via Home Assistant.",
+    price: "36.99",
+    imageUrl: "https://m.media-amazon.com/images/I/71nJyHFpt-L._AC_SL1500_.jpg",
+    vendor: "Cobalt Aquatics",
+    productType: "HEATER",
+    tags: ["heater", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B008AGHHD2",
+    title: "Cobalt Aquatics Neo-Therm 150W — Up to 40 Gallon",
+    description:
+      "Shatterproof heater with integrated electronic thermostat. Slim flat profile mounts flush against glass. LED indicator and ±0.5°F accuracy.",
     price: "39.99",
     imageUrl: "https://m.media-amazon.com/images/I/71nJyHFpt-L._AC_SL1500_.jpg",
     vendor: "Cobalt Aquatics",
@@ -116,11 +378,78 @@ const HEATERS: NormalizedProduct[] = [
     automationCompatible: true,
   }),
   createAmazonProduct({
+    asin: "B008AGHHEG",
+    title: "Cobalt Aquatics Neo-Therm 200W — Up to 55 Gallon",
+    description:
+      "Powerful shatterproof heater with digital thermostat. Sleek flat design disappears in the tank. Smart-plug compatible for HA automation.",
+    price: "44.99",
+    imageUrl: "https://m.media-amazon.com/images/I/71nJyHFpt-L._AC_SL1500_.jpg",
+    vendor: "Cobalt Aquatics",
+    productType: "HEATER",
+    tags: ["heater", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B008AGHHF0",
+    title: "Cobalt Aquatics Neo-Therm 250W — Up to 70 Gallon",
+    description:
+      "Large shatterproof heater for medium-large tanks. Digital thermostat with LED indicator and ±0.5°F accuracy. Tuya smart plug compatible.",
+    price: "49.99",
+    imageUrl: "https://m.media-amazon.com/images/I/71nJyHFpt-L._AC_SL1500_.jpg",
+    vendor: "Cobalt Aquatics",
+    productType: "HEATER",
+    tags: ["heater", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+
+  /* --- Hygger — budget titanium heaters with external controllers --- */
+  createAmazonProduct({
+    asin: "B07BHHP42F",
+    title: "Hygger 50W Titanium Aquarium Heater — Up to 10 Gallon",
+    description:
+      "Compact titanium heating element with external digital controller. Corrosion-resistant and safe for freshwater and saltwater. Budget-friendly for small tanks.",
+    price: "16.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61U77C224EL._AC_SL1001_.jpg",
+    vendor: "Hygger",
+    productType: "HEATER",
+    tags: ["heater", "titanium", "nano", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
     asin: "B07H333NG2",
-    title: "Hygger 100W Titanium Aquarium Heater with External Controller",
+    title: "Hygger 100W Titanium Aquarium Heater — Up to 30 Gallon",
     description:
       "Titanium heating element with separate digital controller. Durable for freshwater and saltwater. Smart-plug compatible for HA automation with Tuya or Shelly.",
     price: "29.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61U77C224EL._AC_SL1001_.jpg",
+    vendor: "Hygger",
+    productType: "HEATER",
+    tags: ["heater", "titanium", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B07H3398CQ",
+    title: "Hygger 200W Titanium Aquarium Heater — Up to 55 Gallon",
+    description:
+      "Mid-range titanium heater with external digital controller. Precise temperature control and corrosion-resistant construction. Smart-plug compatible.",
+    price: "34.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61U77C224EL._AC_SL1001_.jpg",
+    vendor: "Hygger",
+    productType: "HEATER",
+    tags: ["heater", "titanium", "freshwater", "saltwater", "equipment", "automation-compatible"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B08C2Y3DDP",
+    title: "Hygger 500W Titanium Aquarium Heater — Up to 125 Gallon",
+    description:
+      "High-wattage titanium heater for large and extra-large tanks. External digital controller with LED display. Corrosion-proof for freshwater and saltwater setups.",
+    price: "44.99",
     imageUrl: "https://m.media-amazon.com/images/I/61U77C224EL._AC_SL1001_.jpg",
     vendor: "Hygger",
     productType: "HEATER",

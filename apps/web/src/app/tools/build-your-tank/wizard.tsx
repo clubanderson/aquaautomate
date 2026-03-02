@@ -39,13 +39,54 @@ const STEP_PRODUCT_TYPES: Record<WizardStep, string[]> = {
   review: [],
 };
 
-/** Regex to extract gallon size from a product title */
+/** Regex to extract gallon size from a tank title (e.g. "29 Gallon") */
 const GALLON_REGEX = /(\d+)\s*gallon/i;
+
+/** Regex: "X to Y Gallon" — rated range filters/heaters */
+const RANGE_GALLON_REGEX = /(\d+)\s*to\s*(\d+)\s*gallon/i;
+
+/** Regex: "Up to Y Gallon" — max-rated filters/heaters */
+const UPTO_GALLON_REGEX = /up\s*to\s*(\d+)\s*gallon/i;
+
+/** Steps that should be filtered by the selected tank size */
+const SIZE_FILTERED_STEPS: WizardStep[] = ["filter", "heater"];
 
 /** Parse gallon size from a tank product title */
 function extractGallons(title: string): number | null {
   const match = title.match(GALLON_REGEX);
   return match ? parseInt(match[1], 10) : null;
+}
+
+/**
+ * Extract the gallon rating range from a filter/heater title.
+ * Returns [min, max] or null if no rating found.
+ *
+ * Examples:
+ *   "AquaClear 50 Power Filter — 20 to 50 Gallon" → [20, 50]
+ *   "Fluval 207 Canister Filter — Up to 45 Gallon" → [0, 45]
+ */
+function extractGallonRange(title: string): [number, number] | null {
+  const rangeMatch = title.match(RANGE_GALLON_REGEX);
+  if (rangeMatch) {
+    return [parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10)];
+  }
+  const uptoMatch = title.match(UPTO_GALLON_REGEX);
+  if (uptoMatch) {
+    return [0, parseInt(uptoMatch[1], 10)];
+  }
+  return null;
+}
+
+/**
+ * Check if an accessory product is compatible with the given tank size.
+ * A product is compatible when the tank gallons fall within its rated range.
+ * Products without a gallon rating in the title are always shown.
+ */
+function isAccessoryCompatible(product: NormalizedProduct, tankGallons: number): boolean {
+  const range = extractGallonRange(product.title);
+  if (!range) return true; /* no rating info — always show */
+  const [min, max] = range;
+  return tankGallons >= min && tankGallons <= max;
 }
 
 function productHref(p: NormalizedProduct): string {
@@ -84,7 +125,12 @@ export function TankWizard() {
     if (currentStep > 0) setCurrentStep((p) => p - 1);
   };
 
-  /* Get products for current step — filter tanks by minimum gallon size */
+  /* Derive the selected tank size (used to filter accessories) */
+  const selectedTankGallons = selections.tank
+    ? extractGallons(selections.tank.title)
+    : null;
+
+  /* Get products for current step — filter by type and tank size compatibility */
   const stepProducts = AMAZON_PRODUCTS.filter((p) => {
     if (!(STEP_PRODUCT_TYPES[step.id] || []).includes(p.productType || "")) {
       return false;
@@ -94,7 +140,22 @@ export function TankWizard() {
       const gallons = extractGallons(p.title);
       if (gallons !== null && gallons < minGallons) return false;
     }
+    /* Filter accessories by selected tank size */
+    if (
+      SIZE_FILTERED_STEPS.includes(step.id) &&
+      selectedTankGallons !== null
+    ) {
+      return isAccessoryCompatible(p, selectedTankGallons);
+    }
     return true;
+  });
+
+  /* Sort: HA-automation-compatible products first, then by price ascending */
+  stepProducts.sort((a, b) => {
+    const aAuto = a.automationCompatible ? 0 : 1;
+    const bAuto = b.automationCompatible ? 0 : 1;
+    if (aAuto !== bAuto) return aAuto - bAuto;
+    return Number(a.price.amount) - Number(b.price.amount);
   });
 
   /* Calculate total cost */
@@ -225,6 +286,20 @@ export function TankWizard() {
             </div>
           )}
 
+          {/* Info banner when filtering accessories by selected tank size */}
+          {SIZE_FILTERED_STEPS.includes(step.id) && selectedTankGallons && (
+            <div className="flex items-center gap-2 rounded-md border border-aqua/20 bg-aqua/5 px-3 py-2 text-xs text-muted-foreground">
+              <Info className="h-3.5 w-3.5 shrink-0 text-aqua" />
+              <span>
+                Showing {step.label.toLowerCase()}s rated for your{" "}
+                <span className="font-medium text-foreground">
+                  {selectedTankGallons}-gallon
+                </span>{" "}
+                tank.
+              </span>
+            </div>
+          )}
+
           {selections[step.id] && (
             <div className="rounded-lg border border-aqua/30 bg-aqua/5 p-3">
               <div className="flex items-center justify-between">
@@ -269,9 +344,16 @@ export function TankWizard() {
                     <span className="text-sm font-medium text-aqua">
                       ${p.price.amount}
                     </span>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {p.vendor}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      {p.automationCompatible && (
+                        <Badge className="bg-green-600/20 text-green-400 text-[10px] border-green-600/30">
+                          HA Ready
+                        </Badge>
+                      )}
+                      <Badge variant="secondary" className="text-[10px]">
+                        {p.vendor}
+                      </Badge>
+                    </div>
                   </div>
                 </button>
               );
