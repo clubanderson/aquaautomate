@@ -1,0 +1,235 @@
+---
+title: "Automated Fish Feeding with Home Assistant"
+slug: "automate-feeding"
+description: "Set up programmable auto feeders with Home Assistant for scheduled feeding, vacation mode, and feeding-mode scripts that dim lights and pause filters."
+category: "automation"
+difficulty: "easy"
+author: "AquaAutomate"
+date: "2026-03-01"
+tags: ["feeding", "auto-feeder", "home-assistant", "tuya", "vacation", "automation"]
+image: "/images/guides/auto-feeding.jpg"
+---
+
+# Automated Fish Feeding with Home Assistant
+
+Consistent feeding keeps fish healthy. Auto feeders handle the schedule, and Home Assistant adds intelligence — feeding-mode scripts that dim lights and pause filters, vacation mode with randomized times, and notifications when feeding completes.
+
+## What You'll Need
+
+- **Automatic fish feeder** (Eheim Everyday or Zacro USB)
+- **Tuya smart plug** — controls power to the feeder
+- **Home Assistant** — already set up ([see getting started guide](/guides/ha-getting-started))
+- Optional: **Lutron Pico remote** — physical button for manual feeding
+
+## How Auto Feeders Work with Smart Plugs
+
+Most auto feeders dispense food when they power on or on a timer. By controlling the power with a Tuya smart plug, Home Assistant becomes the scheduler:
+
+1. Set the feeder's built-in timer to its shortest interval
+2. Leave the feeder "ready" with food loaded
+3. Home Assistant turns the plug on → feeder dispenses → plug turns off after a delay
+
+The smart plug gives you control the feeder itself doesn't have: randomized times, skip days, and integration with other tank automations.
+
+## Step 1: Set Up the Feeder
+
+1. Mount the auto feeder on the tank rim
+2. Fill the food compartment
+3. Plug the feeder into a Tuya smart plug
+4. Add the smart plug to Home Assistant via the Tuya integration
+
+```yaml
+# Entity for the feeder's smart plug
+switch.tuya_auto_feeder
+```
+
+## Step 2: Feeding Schedule Automation
+
+### Twice Daily Feeding
+
+```yaml
+automation:
+  - alias: "Morning Feeding"
+    description: "Dispense food at 8:00 AM"
+    trigger:
+      - platform: time
+        at: "08:00:00"
+    action:
+      - service: script.turn_on
+        target:
+          entity_id: script.feed_fish
+
+  - alias: "Evening Feeding"
+    description: "Dispense food at 6:00 PM"
+    trigger:
+      - platform: time
+        at: "18:00:00"
+    action:
+      - service: script.turn_on
+        target:
+          entity_id: script.feed_fish
+```
+
+### The Feeding Script
+
+This script handles the full feeding sequence — turn on the feeder, wait for it to dispense, turn it off:
+
+```yaml
+script:
+  feed_fish:
+    alias: "Feed Fish"
+    description: "Activate auto feeder for one dispensing cycle"
+    sequence:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_auto_feeder
+      - delay:
+          seconds: 15
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_auto_feeder
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Fish Fed"
+          message: "Auto feeder dispensed at {{ now().strftime('%I:%M %p') }}"
+```
+
+## Step 3: Feeding Mode (Dim Lights + Pause Filter)
+
+When fish are feeding, you want:
+- **Lights dimmed** — reduces stress during feeding
+- **Filter paused** — food doesn't get sucked into the filter
+- **Resume after 30 minutes** — everything goes back to normal
+
+```yaml
+script:
+  tank_feeding_mode:
+    alias: "Tank Feeding Mode"
+    description: "Dim lights, pause filter, feed, then resume after 30 minutes"
+    sequence:
+      # Dim or turn off the main light
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_aquarium_light
+      # Pause the filter
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_canister_filter
+      # Dispense food
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_auto_feeder
+      - delay:
+          seconds: 15
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_auto_feeder
+      # Wait 30 minutes for fish to eat
+      - delay:
+          minutes: 30
+      # Resume normal operation
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_aquarium_light
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_canister_filter
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Feeding Mode Complete"
+          message: "Lights and filter resumed. Feeding mode ended."
+```
+
+## Step 4: Vacation Mode
+
+Going away for a week? Vacation mode feeds once daily at a slightly randomized time so it looks natural:
+
+```yaml
+automation:
+  - alias: "Vacation Feeding"
+    description: "Feed once daily at a random time between 10 AM and 2 PM"
+    trigger:
+      - platform: time
+        at: "10:00:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.vacation_mode
+        state: "on"
+    action:
+      - delay:
+          minutes: "{{ range(0, 240) | random }}"
+      - service: script.turn_on
+        target:
+          entity_id: script.feed_fish
+```
+
+Create the vacation mode toggle:
+
+```yaml
+input_boolean:
+  vacation_mode:
+    name: "Vacation Mode"
+    icon: mdi:airplane
+```
+
+Add it to your dashboard so you can toggle it from your phone before leaving.
+
+## Step 5: Manual Feeding with Lutron Pico
+
+Map a Pico remote button to trigger feeding mode — no phone needed:
+
+```yaml
+automation:
+  - alias: "Pico Button — Manual Feed"
+    description: "Center button on Pico triggers feeding mode"
+    trigger:
+      - platform: device
+        device_id: !input pico_remote
+        type: press
+        subtype: button_3
+    action:
+      - service: script.turn_on
+        target:
+          entity_id: script.tank_feeding_mode
+```
+
+## Step 6: Dashboard Card
+
+```yaml
+type: vertical-stack
+cards:
+  - type: entities
+    title: "Feeding"
+    entities:
+      - entity: switch.tuya_auto_feeder
+        name: "Auto Feeder"
+        icon: "mdi:fish"
+      - entity: input_boolean.vacation_mode
+        name: "Vacation Mode"
+      - type: button
+        name: "Feed Now"
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          target:
+            entity_id: script.tank_feeding_mode
+```
+
+## My Setup
+
+I use an Eheim Everyday feeder on a Tuya smart plug. Twice daily feeding at 8 AM and 6 PM, with feeding mode that dims lights and pauses the canister filter for 30 minutes. The center button on my Lutron Pico triggers manual feeding mode — great for when guests want to feed the fish.
+
+During vacations, I flip the vacation mode toggle and the feeding drops to once daily at a random time. I also reduce the portion size on the feeder's dial before leaving.
+
+## Tips
+
+- **Test the portion size** before automating — too much food fouls the water
+- **Clean the feeder monthly** — food residue can jam the mechanism
+- **Use a Shelly plug** if you want to monitor power draw — you can detect when the feeder is jammed (no power spike during the cycle)
+- **Skip one feeding day per week** — most fish benefit from a fasting day
+
+## What's Next?
+
+- [Scene Control with Lutron Pico](/guides/automate-scenes) — map all 5 buttons to tank modes
+- [Temperature Monitoring](/guides/automate-temperature) — heater control + alerts
+- [Build Your Dashboard](/guides/automate-dashboard) — the complete aquarium dashboard

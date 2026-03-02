@@ -10,6 +10,11 @@ const FOOTER_LINKS = {
     { label: "Automation Gear", href: "/collections/automation-gear" },
     { label: "Hardscape", href: "/collections/hardscape" },
   ],
+  Automation: [
+    { label: "Overview", href: "/automation" },
+    { label: "Getting Started", href: "/guides/ha-getting-started" },
+    { label: "All Guides", href: "/guides?category=automation" },
+  ],
   Guides: [
     { label: "Automation Blueprints", href: "/guides?category=automation" },
     { label: "Species Care", href: "/guides?category=species" },

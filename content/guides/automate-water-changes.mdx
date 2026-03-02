@@ -1,0 +1,236 @@
+---
+title: "Automated Water Changes (AWC) with Home Assistant"
+slug: "automate-water-changes"
+description: "Build an automated water change system with dosing pumps, float valves, PEX plumbing, and Home Assistant — from hardware to YAML configs."
+category: "automation"
+difficulty: "advanced"
+author: "AquaAutomate"
+date: "2026-03-01"
+tags: ["awc", "water-change", "dosing-pump", "pex", "home-assistant", "plumbing"]
+image: "/images/guides/awc.jpg"
+---
+
+# Automated Water Changes (AWC) with Home Assistant
+
+Manual water changes are the most tedious part of fishkeeping. An AWC (Automatic Water Change) system handles it for you — draining old water and replacing with fresh, dechlorinated water on a schedule. Home Assistant orchestrates the pumps, monitors water levels, and alerts you if anything goes wrong.
+
+## What You'll Need
+
+### Pumps & Valves
+- **Dosing pump** (Kamoer peristaltic) — moves water in/out
+- **Float valve** or **optical sensor** (AutoAqua Smart ATO) — detects water level
+- **Solenoid valve** (optional) — electrically controlled shutoff
+
+### Plumbing
+- **PEX-B tubing** (SharkBite 1/2") — flexible, durable water lines
+- **SharkBite push-fit elbows** — tool-free connections
+- **SharkBite ball valve** — manual shutoff for maintenance
+- **Copper crimp rings + iCrimp tool** — for permanent connections
+
+### Smart Controls
+- **Tuya smart plugs** — power the dosing pumps via HA schedule
+- **Home Assistant** — orchestrates the entire cycle
+
+## System Architecture
+
+```yaml
+# AWC System Layout
+#
+# [Home Assistant]
+#    |
+#    ├── Tuya Plug 1 → Drain Pump → Tank → Waste Drain
+#    |
+#    ├── Tuya Plug 2 → Fill Pump → Reservoir → Tank
+#    |
+#    └── AutoAqua ATO → Float Sensor → Tank Water Level
+#
+# PEX plumbing connects reservoir, tank, and drain
+# Float sensor triggers safety shutoff if overfill detected
+```
+
+## Step 1: Plumbing the PEX Lines
+
+### Drain Line
+1. Run 1/2" PEX from the tank to a floor drain or bucket
+2. Use SharkBite push-fit elbows for corners
+3. Install a SharkBite ball valve near the tank for manual shutoff
+
+### Fill Line
+1. Run 1/2" PEX from a freshwater reservoir to the tank
+2. The reservoir should be elevated above the tank or use a pump
+3. Add a check valve to prevent backflow
+
+### Tools Needed
+- **iCrimp PEX crimp tool** — for permanent, leak-free connections
+- **SharkBite copper crimp rings** — secure PEX to fittings
+- **PEX tubing cutter** — clean cuts prevent leaks
+
+## Step 2: Set Up the Dosing Pumps
+
+### Drain Pump
+1. Connect the Kamoer peristaltic pump to the drain PEX line
+2. Plug into a Tuya smart plug
+3. Calibrate: time how long it takes to pump 1 gallon
+
+### Fill Pump
+1. Connect a second dosing pump (or gravity-feed from an elevated reservoir) to the fill PEX line
+2. Plug into a separate Tuya smart plug
+3. Calibrate: match the fill rate to the drain rate
+
+```yaml
+# Entity IDs
+switch.tuya_awc_drain_pump    # Drain pump power
+switch.tuya_awc_fill_pump     # Fill pump power
+binary_sensor.autoaqua_water_level  # Float/optical sensor
+```
+
+## Step 3: AWC Automation — The Full Cycle
+
+### Weekly 20% Water Change
+
+```yaml
+automation:
+  - alias: "Weekly AWC — Drain Phase"
+    description: "Drain 20% of tank water every Sunday at 2 AM"
+    trigger:
+      - platform: time
+        at: "02:00:00"
+    condition:
+      - condition: time
+        weekday:
+          - sun
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          message: "AWC starting — draining 20%..."
+      # Turn on drain pump
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_awc_drain_pump
+      # Run for calculated time (e.g., 15 minutes for 15 gallons from a 75-gal tank)
+      - delay:
+          minutes: 15
+      # Stop drain
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_awc_drain_pump
+      - delay:
+          seconds: 30
+      # Start fill
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_awc_fill_pump
+      # Run fill for same duration
+      - delay:
+          minutes: 15
+      # Stop fill
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_awc_fill_pump
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "AWC Complete"
+          message: "Weekly water change finished. 20% replaced."
+```
+
+### Safety Shutoff — Overfill Protection
+
+```yaml
+automation:
+  - alias: "AWC Safety — Overfill Shutoff"
+    description: "Emergency stop if water level sensor detects overfill"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.autoaqua_water_level
+        to: "on"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id:
+            - switch.tuya_awc_fill_pump
+            - switch.tuya_awc_drain_pump
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "AWC EMERGENCY STOP"
+          message: "Water level sensor triggered — all pumps stopped! Check the tank immediately."
+          data:
+            priority: high
+```
+
+### Auto Top-Off (Evaporation Replacement)
+
+Between water changes, evaporation drops the water level. The AutoAqua ATO handles this:
+
+```yaml
+automation:
+  - alias: "Auto Top-Off"
+    description: "Top off evaporated water when level drops"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.autoaqua_water_level
+        to: "off"
+        for:
+          minutes: 5
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_awc_fill_pump
+      - wait_for_trigger:
+          - platform: state
+            entity_id: binary_sensor.autoaqua_water_level
+            to: "on"
+        timeout:
+          minutes: 10
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_awc_fill_pump
+```
+
+## Step 4: Dashboard Card
+
+```yaml
+type: vertical-stack
+title: "Water Change System"
+cards:
+  - type: entities
+    entities:
+      - entity: switch.tuya_awc_drain_pump
+        name: "Drain Pump"
+        icon: mdi:water-minus
+      - entity: switch.tuya_awc_fill_pump
+        name: "Fill Pump"
+        icon: mdi:water-plus
+      - entity: binary_sensor.autoaqua_water_level
+        name: "Water Level"
+        icon: mdi:waves
+  - type: button
+    name: "Run AWC Now"
+    icon: mdi:water-sync
+    tap_action:
+      action: call-service
+      service: automation.trigger
+      target:
+        entity_id: automation.weekly_awc_drain_phase
+```
+
+## My Setup
+
+I run a Kamoer peristaltic pump on each line (drain + fill) controlled by Tuya smart plugs. The reservoir is a 32-gallon Brute trash can in the closet, pre-mixed with dechlorinator. PEX tubing runs through the wall — clean install, no visible hoses.
+
+The AWC runs every Sunday at 2 AM. I calibrated the drain time by timing it with a 5-gallon bucket, then multiplied up. The AutoAqua ATO handles daily evaporation top-offs between changes.
+
+The overfill safety shutoff has never triggered — but it's there for peace of mind. I tested it by manually triggering the float sensor.
+
+## Tips
+
+- **Dechlorinate the reservoir water** before it enters the tank — add Prime or similar to the reservoir when you fill it
+- **Test connections before running** — hand-fill the PEX lines and check every joint for drips
+- **Calibrate pump timing carefully** — run the drain into a bucket and time it before connecting to the tank
+- **Install ball valves** on both lines near the tank — lets you disconnect for maintenance without draining lines
+- **Use a GFCI outlet** for all pump power — water + electricity demands it
+
+## What's Next?
+
+- [Salt Mixing Station](/guides/automate-salt-mixing) — automated mixing for saltwater changes
+- [Smart Power Management](/guides/automate-power-management) — monitor pump energy usage
+- [Build Your Dashboard](/guides/automate-dashboard) — the complete aquarium dashboard

@@ -1,0 +1,411 @@
+---
+title: "Building Your Aquarium Dashboard in Home Assistant"
+slug: "automate-dashboard"
+description: "Build a complete Lovelace dashboard for aquarium monitoring — entity cards, temperature gauges, energy graphs, scene buttons, and mobile layout."
+category: "automation"
+difficulty: "intermediate"
+author: "AquaAutomate"
+date: "2026-03-01"
+tags: ["dashboard", "lovelace", "home-assistant", "monitoring", "ui"]
+image: "/images/guides/dashboard.jpg"
+---
+
+# Building Your Aquarium Dashboard in Home Assistant
+
+A good dashboard gives you at-a-glance status of every tank: temperature, device states, energy usage, and one-tap scene control. This guide builds the complete Lovelace aquarium dashboard from scratch — optimized for both desktop and mobile.
+
+## What You'll Need
+
+- **Home Assistant** with all aquarium devices added ([see getting started guide](/guides/ha-getting-started))
+- Devices to monitor: smart plugs, temperature sensors, scene buttons
+- About 30 minutes to configure
+
+## Dashboard Layout
+
+We'll build a dashboard with these sections:
+
+1. **Status Bar** — quick overview: temp, active scene, alerts
+2. **Device Control** — on/off switches for every device
+3. **Temperature** — gauge + 24-hour history graph
+4. **Energy Monitor** — per-device power draw
+5. **Scene Buttons** — one-tap day/night/feeding/maintenance
+6. **Feeding Log** — last feed time and schedule
+7. **AWC Status** — next water change, reservoir status
+
+## Step 1: Create the Dashboard
+
+1. Go to **Settings → Dashboards → Add Dashboard**
+2. Name it **Aquarium**
+3. Set icon to `mdi:fish`
+4. Click **Edit Dashboard** → switch to YAML mode
+
+Or add directly to your existing dashboard by editing the Lovelace YAML.
+
+## Step 2: Status Overview Card
+
+A glance card showing the most important info:
+
+```yaml
+type: horizontal-stack
+cards:
+  - type: entity
+    entity: sensor.inkbird_aquarium_temperature
+    name: "Temp"
+    icon: mdi:thermometer
+  - type: entity
+    entity: switch.tuya_aquarium_light
+    name: "Light"
+    icon: mdi:lightbulb
+  - type: entity
+    entity: switch.shelly_plug_heater
+    name: "Heater"
+    icon: mdi:fire
+  - type: entity
+    entity: switch.tuya_canister_filter
+    name: "Filter"
+    icon: mdi:water-pump
+```
+
+## Step 3: Device Control Panel
+
+All switches in one card with friendly names and icons:
+
+```yaml
+type: entities
+title: "Device Control"
+show_header_toggle: false
+entities:
+  - entity: switch.tuya_aquarium_light
+    name: "Aquarium Light"
+    icon: mdi:lightbulb
+  - entity: switch.shelly_plug_heater
+    name: "Primary Heater"
+    icon: mdi:fire
+  - entity: switch.tuya_backup_heater
+    name: "Backup Heater"
+    icon: mdi:fire-alert
+  - entity: switch.tuya_canister_filter
+    name: "Canister Filter"
+    icon: mdi:water-pump
+  - entity: switch.tuya_air_pump
+    name: "Air Pump"
+    icon: mdi:air-filter
+  - entity: switch.tuya_auto_feeder
+    name: "Auto Feeder"
+    icon: mdi:fish
+  - entity: switch.tuya_uv_sterilizer
+    name: "UV Sterilizer"
+    icon: mdi:lightbulb-fluorescent-tube
+  - type: divider
+  - entity: input_boolean.vacation_mode
+    name: "Vacation Mode"
+    icon: mdi:airplane
+```
+
+## Step 4: Temperature Section
+
+```yaml
+type: vertical-stack
+cards:
+  - type: gauge
+    entity: sensor.inkbird_aquarium_temperature
+    name: "Water Temperature"
+    unit: "°F"
+    min: 65
+    max: 90
+    needle: true
+    severity:
+      green: 75
+      yellow: 80
+      red: 84
+  - type: history-graph
+    entities:
+      - entity: sensor.inkbird_aquarium_temperature
+        name: "Temperature"
+    hours_to_show: 48
+    refresh_interval: 300
+```
+
+## Step 5: Energy Monitoring Section
+
+```yaml
+type: vertical-stack
+title: "Energy Monitor"
+cards:
+  - type: entities
+    entities:
+      - entity: sensor.shelly_plug_heater_power
+        name: "Heater"
+        icon: mdi:fire
+        suffix: "W"
+      - entity: sensor.shelly_plug_filter_power
+        name: "Filter"
+        icon: mdi:water-pump
+        suffix: "W"
+  - type: history-graph
+    entities:
+      - entity: sensor.shelly_plug_heater_power
+        name: "Heater (W)"
+      - entity: sensor.shelly_plug_filter_power
+        name: "Filter (W)"
+    hours_to_show: 24
+  - type: entities
+    title: "Monthly Usage"
+    entities:
+      - entity: sensor.shelly_plug_heater_energy
+        name: "Heater Total"
+        icon: mdi:flash
+        suffix: "kWh"
+      - entity: sensor.shelly_plug_filter_energy
+        name: "Filter Total"
+        icon: mdi:flash
+        suffix: "kWh"
+```
+
+## Step 6: Scene Control Buttons
+
+```yaml
+type: horizontal-stack
+cards:
+  - type: button
+    name: "Day"
+    icon: mdi:white-balance-sunny
+    icon_height: 40px
+    tap_action:
+      action: call-service
+      service: scene.turn_on
+      target:
+        entity_id: scene.tank_day_mode
+    style: |
+      ha-card { background: rgba(0, 212, 170, 0.1); }
+  - type: button
+    name: "Night"
+    icon: mdi:moon-waning-crescent
+    icon_height: 40px
+    tap_action:
+      action: call-service
+      service: scene.turn_on
+      target:
+        entity_id: scene.tank_night_mode
+  - type: button
+    name: "Feed"
+    icon: mdi:fish
+    icon_height: 40px
+    tap_action:
+      action: call-service
+      service: script.turn_on
+      target:
+        entity_id: script.tank_feeding_mode
+  - type: button
+    name: "Movie"
+    icon: mdi:movie-open
+    icon_height: 40px
+    tap_action:
+      action: call-service
+      service: scene.turn_on
+      target:
+        entity_id: scene.tank_movie_mode
+  - type: button
+    name: "Maint"
+    icon: mdi:wrench
+    icon_height: 40px
+    tap_action:
+      action: call-service
+      service: scene.turn_on
+      target:
+        entity_id: scene.tank_maintenance_mode
+    style: |
+      ha-card { background: rgba(255, 107, 107, 0.1); }
+```
+
+## Step 7: Conditional Alert Banner
+
+Show a warning banner only when something is wrong:
+
+```yaml
+type: conditional
+conditions:
+  - condition: numeric_state
+    entity: sensor.inkbird_aquarium_temperature
+    above: 82
+card:
+  type: markdown
+  content: >
+    **Temperature Alert:** Water is {{ states('sensor.inkbird_aquarium_temperature') }}°F —
+    above safe range. Check heater and room temperature.
+  style: |
+    ha-card {
+      background: rgba(255, 107, 107, 0.2);
+      border: 1px solid rgba(255, 107, 107, 0.5);
+    }
+```
+
+## Step 8: AWC Status Card
+
+```yaml
+type: entities
+title: "Water Change System"
+entities:
+  - entity: switch.tuya_awc_drain_pump
+    name: "Drain Pump"
+    icon: mdi:water-minus
+  - entity: switch.tuya_awc_fill_pump
+    name: "Fill Pump"
+    icon: mdi:water-plus
+  - entity: binary_sensor.autoaqua_water_level
+    name: "Water Level"
+    icon: mdi:waves
+  - type: button
+    name: "Run AWC Now"
+    icon: mdi:water-sync
+    tap_action:
+      action: call-service
+      service: automation.trigger
+      target:
+        entity_id: automation.weekly_awc_drain_phase
+```
+
+## Step 9: Mobile Optimization
+
+For mobile, use a single-column layout. Create a separate mobile view:
+
+1. Click the three dots → **Edit Dashboard**
+2. Add a new **View** → name it "Mobile"
+3. Set view type to **Panel** or **Masonry** (1 column)
+4. Add the same cards in priority order: Status → Temp → Scenes → Devices
+
+```yaml
+# Mobile-friendly compact status card
+type: glance
+title: "Tank Status"
+entities:
+  - entity: sensor.inkbird_aquarium_temperature
+    name: "Temp"
+  - entity: switch.tuya_aquarium_light
+    name: "Light"
+  - entity: switch.shelly_plug_heater
+    name: "Heat"
+  - entity: switch.tuya_air_pump
+    name: "Air"
+  - entity: input_boolean.vacation_mode
+    name: "Vacation"
+```
+
+## My Complete Dashboard YAML
+
+Here's the full dashboard config that I run — copy and customize:
+
+```yaml
+views:
+  - title: "Aquarium"
+    icon: mdi:fish
+    cards:
+      # Row 1: Quick status
+      - type: horizontal-stack
+        cards:
+          - type: entity
+            entity: sensor.inkbird_aquarium_temperature
+            name: "Temp"
+          - type: entity
+            entity: switch.tuya_aquarium_light
+            name: "Light"
+          - type: entity
+            entity: switch.shelly_plug_heater
+            name: "Heater"
+          - type: entity
+            entity: switch.tuya_canister_filter
+            name: "Filter"
+      # Row 2: Scene buttons
+      - type: horizontal-stack
+        cards:
+          - type: button
+            name: "Day"
+            icon: mdi:white-balance-sunny
+            tap_action:
+              action: call-service
+              service: scene.turn_on
+              target:
+                entity_id: scene.tank_day_mode
+          - type: button
+            name: "Night"
+            icon: mdi:moon-waning-crescent
+            tap_action:
+              action: call-service
+              service: scene.turn_on
+              target:
+                entity_id: scene.tank_night_mode
+          - type: button
+            name: "Feed"
+            icon: mdi:fish
+            tap_action:
+              action: call-service
+              service: script.turn_on
+              target:
+                entity_id: script.tank_feeding_mode
+          - type: button
+            name: "Maint"
+            icon: mdi:wrench
+            tap_action:
+              action: call-service
+              service: scene.turn_on
+              target:
+                entity_id: scene.tank_maintenance_mode
+      # Row 3: Temperature
+      - type: gauge
+        entity: sensor.inkbird_aquarium_temperature
+        name: "Water Temperature"
+        unit: "°F"
+        min: 65
+        max: 90
+        needle: true
+        severity:
+          green: 75
+          yellow: 80
+          red: 84
+      - type: history-graph
+        entities:
+          - entity: sensor.inkbird_aquarium_temperature
+        hours_to_show: 48
+      # Row 4: All devices
+      - type: entities
+        title: "All Devices"
+        entities:
+          - entity: switch.tuya_aquarium_light
+            name: "Light"
+          - entity: switch.shelly_plug_heater
+            name: "Heater"
+          - entity: switch.tuya_canister_filter
+            name: "Filter"
+          - entity: switch.tuya_air_pump
+            name: "Air Pump"
+          - entity: switch.tuya_auto_feeder
+            name: "Feeder"
+          - entity: switch.tuya_uv_sterilizer
+            name: "UV"
+          - type: divider
+          - entity: input_boolean.vacation_mode
+            name: "Vacation Mode"
+      # Row 5: Energy
+      - type: history-graph
+        title: "Energy (24h)"
+        entities:
+          - entity: sensor.shelly_plug_heater_power
+            name: "Heater"
+          - entity: sensor.shelly_plug_filter_power
+            name: "Filter"
+        hours_to_show: 24
+```
+
+## Tips
+
+- **Use consistent naming** — "Tank Light" not "switch.tuya_outlet_3_1"
+- **Group by function** not by device brand
+- **Add conditional cards** for alerts — they only show when relevant
+- **Bookmark the dashboard on your phone** for quick access
+- **Use HA Companion App** — native app with push notifications + widget support
+
+## What's Next?
+
+- [Scene Control with Lutron Pico](/guides/automate-scenes) — the physical buttons for your dashboard
+- [Smart Power Management](/guides/automate-power-management) — energy monitoring details
+- [Getting Started with Home Assistant](/guides/ha-getting-started) — if you haven't set up HA yet

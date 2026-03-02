@@ -1,0 +1,203 @@
+---
+title: "Temperature Monitoring & Smart Heater Control"
+slug: "automate-temperature"
+description: "Set up Inkbird WiFi temperature controllers with Home Assistant for real-time monitoring, mobile alerts, and backup heater automation."
+category: "automation"
+difficulty: "easy"
+author: "AquaAutomate"
+date: "2026-03-01"
+tags: ["temperature", "inkbird", "heater", "home-assistant", "monitoring", "alerts"]
+image: "/images/guides/temperature.jpg"
+---
+
+# Temperature Monitoring & Smart Heater Control
+
+Temperature swings kill fish. A stuck heater can cook your tank overnight. With an Inkbird WiFi controller and Home Assistant, you get real-time monitoring, mobile alerts, and automatic backup heater control — so you catch problems before your fish do.
+
+## What You'll Need
+
+- **Inkbird ITC-306A WiFi Temperature Controller** — dual probes, heating/cooling outlets
+- **Tuya or Shelly smart plug** — for backup heater control
+- **Home Assistant** — already set up ([see getting started guide](/guides/ha-getting-started))
+- A heater (any submersible aquarium heater)
+
+## How It Works
+
+The Inkbird controller plugs into your heater and monitors water temperature via a probe. It has its own thermostat, but by connecting it to Home Assistant via the Tuya integration, you unlock:
+
+1. **Temperature history graphs** — see trends over hours, days, weeks
+2. **Mobile push alerts** — know instantly if temperature drifts
+3. **Backup heater automation** — second heater kicks on if primary fails
+4. **Dashboard monitoring** — at-a-glance temp for every tank
+
+## Step 1: Set Up the Inkbird
+
+1. Plug the Inkbird ITC-306A into a power outlet
+2. Plug your heater into the Inkbird's **heating outlet**
+3. Place the temperature probe in your tank (suction cup to glass, mid-water level)
+4. Set target temperature on the Inkbird itself (e.g., 78°F / 25.5°C)
+5. Connect to the **Tuya Smart** or **Smart Life** app on your phone
+
+The Inkbird appears in your Tuya account and syncs to Home Assistant automatically.
+
+## Step 2: Home Assistant Entities
+
+After Tuya integration discovers the Inkbird, you'll see:
+
+```yaml
+# Inkbird entities in Home Assistant
+sensor.inkbird_aquarium_temperature    # Current water temp
+switch.inkbird_aquarium_heating        # Heating outlet on/off
+number.inkbird_aquarium_target_temp    # Target temperature setpoint
+```
+
+## Step 3: Temperature Alert Automations
+
+### High Temperature Alert
+
+```yaml
+automation:
+  - alias: "Tank Too Hot Alert"
+    description: "Notify if water temp exceeds 82°F"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.inkbird_aquarium_temperature
+        above: 82
+        for:
+          minutes: 5
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Aquarium Alert"
+          message: "Water temperature is {{ states('sensor.inkbird_aquarium_temperature') }}°F — above 82°F for 5 minutes!"
+          data:
+            priority: high
+            tag: "tank-temp-high"
+```
+
+### Low Temperature Alert (Heater Failure)
+
+```yaml
+automation:
+  - alias: "Tank Too Cold Alert — Possible Heater Failure"
+    description: "Notify if water temp drops below 74°F"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.inkbird_aquarium_temperature
+        below: 74
+        for:
+          minutes: 10
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Aquarium Alert — Heater Check!"
+          message: "Water temperature dropped to {{ states('sensor.inkbird_aquarium_temperature') }}°F — possible heater failure!"
+          data:
+            priority: high
+            tag: "tank-temp-low"
+```
+
+### Rapid Temperature Change Alert
+
+```yaml
+automation:
+  - alias: "Rapid Temperature Change Alert"
+    description: "Notify if temperature changes more than 3°F in 30 minutes"
+    trigger:
+      - platform: template
+        value_template: >
+          {{ (states('sensor.inkbird_aquarium_temperature') | float -
+              state_attr('sensor.inkbird_aquarium_temperature', 'last_changed_value') | float) | abs > 3 }}
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Aquarium Alert — Rapid Temp Change"
+          message: "Temperature changed rapidly — now {{ states('sensor.inkbird_aquarium_temperature') }}°F. Check the tank."
+```
+
+## Step 4: Backup Heater Automation
+
+Plug a second heater into a Tuya or Shelly smart plug. Home Assistant activates it only if the primary Inkbird fails.
+
+```yaml
+automation:
+  - alias: "Activate Backup Heater"
+    description: "Turn on backup heater if temp drops below 73°F (primary heater likely failed)"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.inkbird_aquarium_temperature
+        below: 73
+        for:
+          minutes: 15
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_backup_heater
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Backup Heater Activated"
+          message: "Primary heater may have failed. Backup heater is ON. Water temp: {{ states('sensor.inkbird_aquarium_temperature') }}°F"
+
+  - alias: "Deactivate Backup Heater"
+    description: "Turn off backup heater once temp recovers above 76°F"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.inkbird_aquarium_temperature
+        above: 76
+        for:
+          minutes: 10
+    condition:
+      - condition: state
+        entity_id: switch.tuya_backup_heater
+        state: "on"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_backup_heater
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Backup Heater Off"
+          message: "Temperature recovered to {{ states('sensor.inkbird_aquarium_temperature') }}°F. Backup heater turned off."
+```
+
+## Step 5: Dashboard Card
+
+Add a temperature card to your Lovelace dashboard:
+
+```yaml
+type: vertical-stack
+cards:
+  - type: gauge
+    entity: sensor.inkbird_aquarium_temperature
+    name: "Water Temperature"
+    unit: "°F"
+    min: 65
+    max: 90
+    severity:
+      green: 75
+      yellow: 80
+      red: 84
+  - type: history-graph
+    entities:
+      - entity: sensor.inkbird_aquarium_temperature
+        name: "Temperature"
+    hours_to_show: 24
+    refresh_interval: 60
+```
+
+## My Setup
+
+I run an Inkbird ITC-306A on each tank with a Shelly Plus Plug S on the backup heater. The Shelly gives me power monitoring — I can see exactly how many watts the heater draws and how often it cycles. If the Inkbird's heating outlet stops drawing power but the temperature is dropping, I know the primary heater died before the backup even kicks on.
+
+## Tips
+
+- **Place the probe mid-tank**, not near the heater — you want ambient water temperature
+- **Set the Inkbird thermostat 1°F above your HA alert threshold** — this gives HA time to alert you before the Inkbird takes over
+- **Use a titanium heater** for saltwater tanks — glass heaters can crack from salt creep
+- **Check probe calibration** monthly — compare against a reliable thermometer
+
+## What's Next?
+
+- [Automated Feeding](/guides/automate-feeding) — auto feeders + feeding mode scripts
+- [Smart Power Management](/guides/automate-power-management) — monitor heater energy usage
+- [Build Your Dashboard](/guides/automate-dashboard) — the complete aquarium dashboard
