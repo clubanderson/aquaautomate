@@ -53,7 +53,7 @@ const PRODUCT_TYPE_LABELS: Record<string, string> = {
   KOI: "Koi",
   AROWANA: "Arowanas",
   MISCELLANEOUS: "Miscellaneous",
-  /* Plants & Driftwood (covers both H2O Plants mixed-case and Danaqua uppercase) */
+  /* Plants, Driftwood & other H2O Plants types */
   DRIFTWOOD: "Driftwood",
   "LIVE PLANTS": "Live Plants",
   PLANT: "Plants",
@@ -62,6 +62,9 @@ const PRODUCT_TYPE_LABELS: Record<string, string> = {
   "GARDEN PLANTS": "Garden Plants",
   "AQUATIC PLANTS": "Aquatic Plants",
   "PACKING MATERIALS": "Packing Materials",
+  "DRY GOODS": "Dry Goods",
+  "LIVE STOCK": "Live Stock",
+  SHIPPING: "Shipping",
 };
 
 /** Minimum products in a type to show as its own section */
