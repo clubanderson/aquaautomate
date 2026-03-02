@@ -213,13 +213,13 @@ export function TankMates({ product, allProducts }: TankMatesProps) {
 
                 {/* Hover preview card — hidden on mobile, shown on desktop hover */}
                 {targetProfile && (
-                  <div className="pointer-events-none absolute -top-2 left-full z-50 ml-3 hidden w-64 -translate-y-1/2 opacity-0 transition-opacity group-hover/row:opacity-100 lg:block">
+                  <div className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 hidden w-72 opacity-0 transition-opacity group-hover/row:opacity-100 lg:block">
                     <div className="rounded-lg border border-border bg-card p-3 shadow-xl shadow-black/30">
                       <p className="text-sm font-semibold">{profile.species}</p>
                       <p className="text-[10px] italic text-muted-foreground">
                         {targetProfile.scientificName}
                       </p>
-                      <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px]">
+                      <div className="mt-2 grid grid-cols-3 gap-1.5 text-[10px]">
                         <div>
                           <span className="text-muted-foreground">Temp: </span>
                           <span className="font-medium">
@@ -246,31 +246,19 @@ export function TankMates({ product, allProducts }: TankMatesProps) {
                             {SWIM_LABELS[targetProfile.swimLevel]}
                           </span>
                         </div>
-                        <div className="col-span-2">
+                        <div>
                           <span className="text-muted-foreground">Nature: </span>
                           <span className="font-medium capitalize">
                             {targetProfile.temperament}
                           </span>
                         </div>
                         {care && (
-                          <>
-                            <div className="col-span-2">
-                              <span className="text-muted-foreground">
-                                Size:{" "}
-                              </span>
-                              <span className="font-medium">
-                                {care.adultSize}
-                              </span>
-                            </div>
-                            <div className="col-span-2">
-                              <span className="text-muted-foreground">
-                                Lifespan:{" "}
-                              </span>
-                              <span className="font-medium">
-                                {care.lifespan}
-                              </span>
-                            </div>
-                          </>
+                          <div>
+                            <span className="text-muted-foreground">Size: </span>
+                            <span className="font-medium">
+                              {care.adultSize}
+                            </span>
+                          </div>
                         )}
                       </div>
                       {care && (

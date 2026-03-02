@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
   Droplets,
+  ExternalLink,
   Fish,
   Heart,
   Ruler,
+  ShoppingCart,
   Thermometer,
   Timer,
   Users,
@@ -18,9 +21,13 @@ import {
   SPECIES_CARE,
   getAllSpeciesSlugs,
   getSpeciesCareBySlug,
-  CARE_SHEET_COMPAT_COUNT,
 } from "@/lib/aquarium/species-care";
-import { getCompatibleSpecies } from "@/lib/aquarium/match-species";
+import {
+  getCompatibleSpecies,
+  findTankMateProducts,
+  matchProductToSpecies,
+} from "@/lib/aquarium/match-species";
+import { AMAZON_PRODUCTS } from "@/lib/commerce/amazon-catalog";
 import type { Compatibility } from "@/lib/aquarium/tank-mates";
 import { SITE_NAME } from "@/lib/constants";
 
@@ -73,13 +80,28 @@ export default async function SpeciesPage({ params }: SpeciesPageProps) {
     (p) => p.species === care.speciesName
   )!;
   const mates = getCompatibleSpecies(care.speciesName);
-  const compatibleMates = mates
-    .filter((m) => m.compatibility === "compatible")
-    .slice(0, CARE_SHEET_COMPAT_COUNT);
+  const compatibleMates = mates.filter(
+    (m) => m.compatibility === "compatible"
+  );
   const cautionMates = mates.filter((m) => m.compatibility === "caution");
   const incompatibleMates = mates.filter(
     (m) => m.compatibility === "incompatible"
   );
+
+  /* Find products matching this species for the buy section */
+  const speciesProducts = AMAZON_PRODUCTS.filter((p) => {
+    const matched = matchProductToSpecies(p);
+    return matched?.species === care.speciesName;
+  });
+  /* Also grab compatible tank-mate products for a "Complete your tank" section */
+  const MAX_TANK_MATE_PRODUCTS = 4;
+  const tankMateProducts = findTankMateProducts(
+    care.speciesName,
+    AMAZON_PRODUCTS,
+    speciesProducts[0]?.id
+  )
+    .filter((m) => m.compatibility === "compatible")
+    .slice(0, MAX_TANK_MATE_PRODUCTS);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -210,6 +232,105 @@ export default async function SpeciesPage({ params }: SpeciesPageProps) {
         </div>
       </section>
 
+      {/* Buy section */}
+      {speciesProducts.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 text-xl font-bold">
+            <ShoppingCart className="mr-2 inline h-5 w-5 text-aqua" />
+            Buy {care.speciesName}
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {speciesProducts.map((p) => {
+              const href =
+                p.source === "amazon"
+                  ? (p.externalUrl ?? "#")
+                  : `/products/${p.handle}`;
+              const isExternal = p.source === "amazon";
+              return (
+                <Link
+                  key={p.id}
+                  href={href}
+                  {...(isExternal
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
+                  className="group flex gap-3 rounded-lg border border-aqua/20 bg-card/50 p-3 transition-colors hover:border-aqua/50 hover:bg-card/80"
+                >
+                  {p.featuredImage && (
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted">
+                      <Image
+                        src={p.featuredImage.url}
+                        alt={p.featuredImage.altText ?? p.title}
+                        fill
+                        className="object-cover"
+                        sizes="80px"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="line-clamp-2 text-sm font-medium group-hover:text-aqua">
+                      {p.title}
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-aqua">
+                      ${p.price.amount}
+                    </p>
+                    {isExternal && (
+                      <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <ExternalLink className="h-2.5 w-2.5" />
+                        Available at Amazon
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+          {tankMateProducts.length > 0 && (
+            <div className="mt-4">
+              <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
+                Compatible Tank-Mates to Buy
+              </h3>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {tankMateProducts.map(({ product: p }) => {
+                  const href =
+                    p.source === "amazon"
+                      ? (p.externalUrl ?? "#")
+                      : `/products/${p.handle}`;
+                  const isExternal = p.source === "amazon";
+                  return (
+                    <Link
+                      key={p.id}
+                      href={href}
+                      {...(isExternal
+                        ? { target: "_blank", rel: "noopener noreferrer" }
+                        : {})}
+                      className="group rounded-lg border border-border/50 bg-card/50 p-2 transition-colors hover:border-aqua/30"
+                    >
+                      {p.featuredImage && (
+                        <div className="relative aspect-square overflow-hidden rounded-md bg-muted">
+                          <Image
+                            src={p.featuredImage.url}
+                            alt={p.featuredImage.altText ?? p.title}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 640px) 50vw, 25vw"
+                          />
+                        </div>
+                      )}
+                      <p className="mt-1.5 line-clamp-2 text-xs font-medium group-hover:text-aqua">
+                        {p.title}
+                      </p>
+                      <p className="text-xs font-bold text-aqua">
+                        ${p.price.amount}
+                      </p>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Compatibility */}
       <section className="mb-8">
         <h2 className="mb-3 text-xl font-bold">Tank-Mate Compatibility</h2>
@@ -218,30 +339,85 @@ export default async function SpeciesPage({ params }: SpeciesPageProps) {
         {compatibleMates.length > 0 && (
           <div className="mb-4">
             <h3 className="mb-2 text-sm font-semibold text-green-400">
-              Compatible Species ({mates.filter((m) => m.compatibility === "compatible").length})
+              Compatible Species ({compatibleMates.length})
             </h3>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {compatibleMates.map(({ profile: p, note }) => {
                 const targetCare = SPECIES_CARE[p.species];
+                const targetProfile = SPECIES_PROFILES.find(
+                  (sp) => sp.species === p.species
+                );
                 return (
-                  <Link
-                    key={p.species}
-                    href={
-                      targetCare
-                        ? `/species/${targetCare.slug}`
-                        : `/collections?q=${encodeURIComponent(p.species.toLowerCase())}`
-                    }
-                    className="flex items-start gap-3 rounded-lg border border-green-600/20 bg-card/50 p-3 transition-colors hover:border-aqua/30"
-                  >
-                    <Badge className={COMPAT_COLORS.compatible}>
-                      {COMPAT_LABELS.compatible}
-                    </Badge>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{p.species}</p>
-                      <p className="text-xs text-muted-foreground">{note}</p>
-                    </div>
-                    <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  </Link>
+                  <div key={p.species} className="group/row relative">
+                    <Link
+                      href={
+                        targetCare
+                          ? `/species/${targetCare.slug}`
+                          : `/collections?q=${encodeURIComponent(p.species.toLowerCase())}`
+                      }
+                      className="flex items-start gap-3 rounded-lg border border-green-600/20 bg-card/50 p-3 transition-colors hover:border-aqua/30"
+                    >
+                      <Badge className={COMPAT_COLORS.compatible}>
+                        {COMPAT_LABELS.compatible}
+                      </Badge>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{p.species}</p>
+                        <p className="text-xs text-muted-foreground">{note}</p>
+                      </div>
+                      <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                    {/* Hover tooltip */}
+                    {targetProfile && (
+                      <div className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 hidden w-72 opacity-0 transition-opacity group-hover/row:opacity-100 lg:block">
+                        <div className="rounded-lg border border-border bg-card p-3 shadow-xl shadow-black/30">
+                          <p className="text-sm font-semibold">{p.species}</p>
+                          <p className="text-[10px] italic text-muted-foreground">
+                            {targetProfile.scientificName}
+                          </p>
+                          <div className="mt-2 grid grid-cols-3 gap-1.5 text-[10px]">
+                            <div>
+                              <span className="text-muted-foreground">Temp: </span>
+                              <span className="font-medium">
+                                {targetProfile.waterParams.tempMinF}&ndash;
+                                {targetProfile.waterParams.tempMaxF}&deg;F
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">pH: </span>
+                              <span className="font-medium">
+                                {targetProfile.waterParams.phMin}&ndash;
+                                {targetProfile.waterParams.phMax}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Tank: </span>
+                              <span className="font-medium">
+                                {targetProfile.minTankGallons}+ gal
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Swim: </span>
+                              <span className="font-medium">
+                                {SWIM_LABELS[targetProfile.swimLevel]}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Nature: </span>
+                              <span className="font-medium capitalize">
+                                {targetProfile.temperament}
+                              </span>
+                            </div>
+                            {targetCare && (
+                              <div>
+                                <span className="text-muted-foreground">Size: </span>
+                                <span className="font-medium">{targetCare.adultSize}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -257,25 +433,79 @@ export default async function SpeciesPage({ params }: SpeciesPageProps) {
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {cautionMates.map(({ profile: p, note }) => {
                 const targetCare = SPECIES_CARE[p.species];
+                const targetProfile = SPECIES_PROFILES.find(
+                  (sp) => sp.species === p.species
+                );
                 return (
-                  <Link
-                    key={p.species}
-                    href={
-                      targetCare
-                        ? `/species/${targetCare.slug}`
-                        : `/collections?q=${encodeURIComponent(p.species.toLowerCase())}`
-                    }
-                    className="flex items-start gap-3 rounded-lg border border-amber-600/20 bg-card/50 p-3 transition-colors hover:border-aqua/30"
-                  >
-                    <Badge className={COMPAT_COLORS.caution}>
-                      {COMPAT_LABELS.caution}
-                    </Badge>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{p.species}</p>
-                      <p className="text-xs text-muted-foreground">{note}</p>
-                    </div>
-                    <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  </Link>
+                  <div key={p.species} className="group/row relative">
+                    <Link
+                      href={
+                        targetCare
+                          ? `/species/${targetCare.slug}`
+                          : `/collections?q=${encodeURIComponent(p.species.toLowerCase())}`
+                      }
+                      className="flex items-start gap-3 rounded-lg border border-amber-600/20 bg-card/50 p-3 transition-colors hover:border-aqua/30"
+                    >
+                      <Badge className={COMPAT_COLORS.caution}>
+                        {COMPAT_LABELS.caution}
+                      </Badge>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{p.species}</p>
+                        <p className="text-xs text-muted-foreground">{note}</p>
+                      </div>
+                      <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                    {targetProfile && (
+                      <div className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 hidden w-72 opacity-0 transition-opacity group-hover/row:opacity-100 lg:block">
+                        <div className="rounded-lg border border-border bg-card p-3 shadow-xl shadow-black/30">
+                          <p className="text-sm font-semibold">{p.species}</p>
+                          <p className="text-[10px] italic text-muted-foreground">
+                            {targetProfile.scientificName}
+                          </p>
+                          <div className="mt-2 grid grid-cols-3 gap-1.5 text-[10px]">
+                            <div>
+                              <span className="text-muted-foreground">Temp: </span>
+                              <span className="font-medium">
+                                {targetProfile.waterParams.tempMinF}&ndash;
+                                {targetProfile.waterParams.tempMaxF}&deg;F
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">pH: </span>
+                              <span className="font-medium">
+                                {targetProfile.waterParams.phMin}&ndash;
+                                {targetProfile.waterParams.phMax}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Tank: </span>
+                              <span className="font-medium">
+                                {targetProfile.minTankGallons}+ gal
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Swim: </span>
+                              <span className="font-medium">
+                                {SWIM_LABELS[targetProfile.swimLevel]}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Nature: </span>
+                              <span className="font-medium capitalize">
+                                {targetProfile.temperament}
+                              </span>
+                            </div>
+                            {targetCare && (
+                              <div>
+                                <span className="text-muted-foreground">Size: </span>
+                                <span className="font-medium">{targetCare.adultSize}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -315,14 +545,6 @@ export default async function SpeciesPage({ params }: SpeciesPageProps) {
             </div>
           </div>
         )}
-
-        <Link
-          href={`/collections?q=${encodeURIComponent(care.speciesName.toLowerCase())}`}
-          className="mt-4 inline-flex items-center gap-1 text-sm text-aqua hover:underline"
-        >
-          Shop {care.speciesName} in our store
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
       </section>
     </div>
   );
