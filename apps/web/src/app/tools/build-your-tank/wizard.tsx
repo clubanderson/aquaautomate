@@ -22,6 +22,7 @@ import {
   type WizardCartItem,
 } from "./wizard-cart-sidebar";
 import { WizardMobileCart } from "./wizard-mobile-cart";
+import { WizardFishStep } from "./wizard-fish-step";
 
 /* ── Step types and ordering ─────────────────────────────────────────── */
 
@@ -335,6 +336,7 @@ export function TankWizard({ products }: TankWizardProps) {
     () => hasPreselectedFish ? TANK_STEP_INDEX : 0,
   );
   const [selections, setSelections] = useState<WizardSelections>(buildInitialSelections);
+  const [activeFishType, setActiveFishType] = useState<string | null>(null);
 
   const step = STEPS[currentStep];
   const isReview = step.id === "review";
@@ -375,6 +377,10 @@ export function TankWizard({ products }: TankWizardProps) {
   };
 
   const goBack = () => {
+    if (step.id === "fish" && activeFishType !== null) {
+      setActiveFishType(null);
+      return;
+    }
     if (currentStep > 0) setCurrentStep((p) => p - 1);
   };
 
@@ -530,7 +536,7 @@ export function TankWizard({ products }: TankWizardProps) {
             {STEPS.map((s, i) => (
               <button
                 key={s.id}
-                onClick={() => setCurrentStep(i)}
+                onClick={() => { setCurrentStep(i); setActiveFishType(null); }}
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                   i === currentStep
                     ? "bg-aqua/20 text-aqua"
@@ -626,36 +632,45 @@ export function TankWizard({ products }: TankWizardProps) {
                 </Button>
               </div>
             </div>
+          ) : step.id === "fish" ? (
+            /* Fish step — type grid with drill-down */
+            <div className="space-y-4">
+              <WizardFishStep
+                fishProducts={stepProducts}
+                selectedFish={selections.fish}
+                hasPreselectedFish={hasPreselectedFish}
+                preselectedCount={preselectedFish.length}
+                onToggleFish={toggleMultiSelectProduct}
+                activeFishType={activeFishType}
+                onSetFishType={setActiveFishType}
+              />
+
+              <div className="flex items-center gap-3">
+                {(currentStep > 0 || activeFishType !== null) && (
+                  <Button
+                    variant="outline"
+                    onClick={goBack}
+                    className="border-border/50"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
+                )}
+                <Button
+                  onClick={goNext}
+                  className="bg-aqua text-deep-blue hover:bg-aqua-dim"
+                >
+                  {hasStepSelection(step.id) ? "Next" : "Skip"}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           ) : (
-            /* Product selection step */
+            /* Product selection step (non-fish) */
             <div className="space-y-4">
               <h2 className="text-xl font-bold capitalize">
-                {isMultiSelect ? `Choose Your ${step.label}` : `Choose a ${step.label}`}
+                Choose a {step.label}
               </h2>
-
-              {/* Info: fish pre-selected from calculator */}
-              {step.id === "fish" && hasPreselectedFish && (
-                <div className="flex items-center gap-2 rounded-md border border-green-600/30 bg-green-600/5 px-3 py-2 text-xs text-muted-foreground">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-green-400" />
-                  <span>
-                    <span className="font-medium text-green-400">
-                      {preselectedFish.length} fish
-                    </span>{" "}
-                    pre-selected from the Tank Calculator. You can adjust your
-                    selections below.
-                  </span>
-                </div>
-              )}
-
-              {/* Info: multi-select hint for fish */}
-              {isMultiSelect && (
-                <div className="flex items-center gap-2 rounded-md border border-aqua/20 bg-aqua/5 px-3 py-2 text-xs text-muted-foreground">
-                  <Info className="h-3.5 w-3.5 shrink-0 text-aqua" />
-                  <span>
-                    Select as many as you like. Tap to toggle.
-                  </span>
-                </div>
-              )}
 
               {/* Info banner when filtering tanks by minimum size */}
               {step.id === "tank" && minGallons && (
@@ -686,8 +701,8 @@ export function TankWizard({ products }: TankWizardProps) {
                   </div>
                 )}
 
-              {/* Current selection banner (single-select steps only) */}
-              {!isMultiSelect && selections[step.id] && (
+              {/* Current selection banner */}
+              {selections[step.id] && (
                 <div className="rounded-lg border border-aqua/30 bg-aqua/5 p-3">
                   <div className="flex items-center justify-between">
                     <div>
