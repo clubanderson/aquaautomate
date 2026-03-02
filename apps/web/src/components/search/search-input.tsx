@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -9,14 +9,8 @@ import { Button } from "@/components/ui/button";
 /** Standalone search input for the /search page (used on all viewports). */
 export function SearchInput({ initialQuery }: { initialQuery: string }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [value, setValue] = useState(initialQuery);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Sync when query param changes externally
-  useEffect(() => {
-    setValue(searchParams.get("q") ?? "");
-  }, [searchParams]);
 
   // Auto-focus on mount when there's no query
   useEffect(() => {
