@@ -27,6 +27,18 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   metadataBase: new URL("https://aquaautomate.com"),
   manifest: "/manifest.json",
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    url: "https://aquaautomate.com",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

@@ -13,7 +13,6 @@ import { ProductBadges } from "@/components/product-badges";
 import { DEMO_PRODUCTS } from "@/lib/commerce/demo-data";
 import { getProductByHandle, getProducts, getAllProducts } from "@/lib/shopify";
 import { normalizeShopifyProduct } from "@/lib/commerce/adapters/shopify";
-import { SITE_NAME } from "@/lib/constants";
 import type { NormalizedProduct } from "@/lib/commerce/types";
 import { AddToCartButton } from "./add-to-cart-button";
 import { VariantSelector } from "./variant-selector";
@@ -64,9 +63,23 @@ export async function generateMetadata({
   const product = await findProduct(handle);
   if (!product) return { title: "Product Not Found" };
 
+  const ogImage = product.featuredImage?.url;
   return {
-    title: `${product.title} | ${SITE_NAME}`,
+    title: product.title,
     description: product.description,
+    openGraph: {
+      title: product.title,
+      description: product.description,
+      type: "website",
+      url: `https://aquaautomate.com/products/${handle}`,
+      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+    },
+    twitter: {
+      card: ogImage ? "summary_large_image" : "summary",
+      title: product.title,
+      description: product.description,
+      ...(ogImage ? { images: [ogImage] } : {}),
+    },
   };
 }
 

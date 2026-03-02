@@ -1,5 +1,5 @@
-/** Revalidate collections every 60 seconds to pick up new Shopify products */
-export const revalidate = 60;
+/** Revalidate collections every 5 minutes to pick up new Shopify products */
+export const revalidate = 300;
 
 import type { Metadata } from "next";
 import Link from "next/link";

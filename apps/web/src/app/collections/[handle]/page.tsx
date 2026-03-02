@@ -10,7 +10,6 @@ import { ProductGrid } from "@/components/product-grid";
 import { DEMO_COLLECTIONS } from "@/lib/commerce/demo-data";
 import { getCollectionByHandle } from "@/lib/shopify";
 import { normalizeShopifyCollection } from "@/lib/commerce/adapters/shopify";
-import { SITE_NAME } from "@/lib/constants";
 import { parseFilters, applyFilters, extractFacets } from "@/lib/commerce/filters";
 import { FilterSidebar } from "@/components/filters/filter-sidebar";
 import { ActiveFilters } from "@/components/filters/active-filters";
@@ -43,7 +42,7 @@ export async function generateMetadata({
   if (!collection) return { title: "Collection Not Found" };
 
   return {
-    title: `${collection.title} | ${SITE_NAME}`,
+    title: collection.title,
     description: collection.description,
   };
 }
