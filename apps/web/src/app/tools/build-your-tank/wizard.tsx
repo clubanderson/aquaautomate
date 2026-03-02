@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -10,10 +10,12 @@ import {
   Check,
   ExternalLink,
   Info,
+  ShoppingCart,
   Store,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/components/cart/cart-context";
 import { getWizardRecommendations } from "@/lib/commerce/wizard-recommendations";
 import { isFishProductType, isProductForStep } from "@/lib/commerce/wizard-product-types";
 import { DEFAULT_FISH_QUANTITY, MIN_FISH_QUANTITY, MAX_FISH_QUANTITY } from "@/lib/constants";
@@ -568,16 +570,44 @@ export function TankWizard({ products }: TankWizardProps) {
   /* Guides to pass to sidebar: step-specific during selection, all during review */
   const sidebarGuides = isReview ? reviewGuides : currentStepGuides;
 
-  /** Open all product links in new tabs */
-  const handleOpenAllLinks = () => {
-    for (const item of cartItems) {
+  /** How long the "Added to cart" confirmation shows (ms) */
+  const CONFIRMATION_DISPLAY_MS = 3000;
+
+  const { addItem } = useCart();
+  const [reviewConfirmation, setReviewConfirmation] = useState<string | null>(null);
+
+  /* Clear review confirmation after timeout */
+  useEffect(() => {
+    if (!reviewConfirmation) return;
+    const timer = setTimeout(() => setReviewConfirmation(null), CONFIRMATION_DISPLAY_MS);
+    return () => clearTimeout(timer);
+  }, [reviewConfirmation]);
+
+  /* Split cart items by vendor source */
+  const reviewShopifyItems = cartItems.filter((i) => i.product.source !== "amazon");
+  const reviewAmazonItems = cartItems.filter((i) => i.product.source === "amazon");
+  const reviewHasShopify = reviewShopifyItems.length > 0;
+  const reviewHasAmazon = reviewAmazonItems.length > 0;
+
+  /** Add Shopify items to cart, open Amazon items in new tabs */
+  const handleAddToCart = useCallback(() => {
+    for (const item of reviewShopifyItems) {
+      addItem(item.product, item.quantity);
+    }
+    for (const item of reviewAmazonItems) {
       if (item.product.externalUrl) {
         window.open(item.product.externalUrl, "_blank", "noopener,noreferrer");
-      } else {
-        window.open(`/products/${item.product.handle}`, "_blank");
       }
     }
-  };
+    const parts: string[] = [];
+    if (reviewShopifyItems.length > 0) {
+      parts.push(`Added ${reviewShopifyItems.length} ${reviewShopifyItems.length === 1 ? "item" : "items"} to cart`);
+    }
+    if (reviewAmazonItems.length > 0) {
+      parts.push(`${reviewAmazonItems.length} Amazon ${reviewAmazonItems.length === 1 ? "item" : "items"} opened`);
+    }
+    setReviewConfirmation(parts.join(" · "));
+  }, [reviewShopifyItems, reviewAmazonItems, addItem]);
 
   /* ── Render ────────────────────────────────────────────────────────── */
 
@@ -647,16 +677,33 @@ export function TankWizard({ products }: TankWizardProps) {
                 </div>
               )}
 
-              {/* Open All Links — prominent CTA */}
+              {/* Add to Cart — prominent CTA */}
               {cartItems.length > 0 && (
-                <Button
-                  onClick={handleOpenAllLinks}
-                  className="w-full bg-aqua text-deep-blue hover:bg-aqua-dim sm:w-auto"
-                  size="lg"
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Open All Product Links
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleAddToCart}
+                    className="w-full bg-aqua text-deep-blue hover:bg-aqua-dim sm:w-auto"
+                    size="lg"
+                  >
+                    {reviewHasShopify ? (
+                      <>
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        {reviewHasAmazon ? "Add to Cart & Open Amazon" : "Add to Cart"}
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Open on Amazon
+                      </>
+                    )}
+                  </Button>
+                  {reviewConfirmation && (
+                    <p className="flex items-center gap-1.5 text-sm text-green-400">
+                      <Check className="h-4 w-4 shrink-0" />
+                      {reviewConfirmation}
+                    </p>
+                  )}
+                </div>
               )}
 
               {cartItems.length === 0 && (

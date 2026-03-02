@@ -1,11 +1,14 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   BookOpen,
+  Check,
   ExternalLink,
   Package,
   ShoppingBag,
+  ShoppingCart,
   Sparkles,
   Store,
   X,
@@ -13,7 +16,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCart } from "@/components/cart/cart-context";
 import type { NormalizedProduct } from "@/lib/commerce/types";
+
+/** How long the "Added to cart" confirmation shows (ms) */
+const CONFIRMATION_DISPLAY_MS = 3000;
 
 /** A selected product tied to a wizard step */
 export interface WizardCartItem {
@@ -80,17 +87,45 @@ export function WizardCartSidebar({
     return sum + Math.max(0, compare - price) * item.quantity;
   }, 0);
 
-  /** Open all product links — Amazon in new tabs, Shopify in new tabs */
-  const handleOpenAllLinks = () => {
-    for (const item of items) {
-      const link = getProductLink(item.product);
-      if (link.external) {
-        window.open(link.href, "_blank", "noopener,noreferrer");
-      } else {
-        window.open(link.href, "_blank");
-      }
+  const { addItem } = useCart();
+  const [confirmation, setConfirmation] = useState<string | null>(null);
+
+  /* Clear confirmation after timeout */
+  useEffect(() => {
+    if (!confirmation) return;
+    const timer = setTimeout(() => setConfirmation(null), CONFIRMATION_DISPLAY_MS);
+    return () => clearTimeout(timer);
+  }, [confirmation]);
+
+  /* Split items by vendor source */
+  const shopifyItems = items.filter((i) => i.product.source !== "amazon");
+  const amazonItems = items.filter((i) => i.product.source === "amazon");
+  const hasAmazon = amazonItems.length > 0;
+  const hasShopify = shopifyItems.length > 0;
+
+  /** Add Shopify items to cart, open Amazon items in new tabs */
+  const handleAddToCart = useCallback(() => {
+    /* Add Shopify products to the site cart */
+    for (const item of shopifyItems) {
+      addItem(item.product, item.quantity);
     }
-  };
+
+    /* Open Amazon products in new tabs */
+    for (const item of amazonItems) {
+      const link = getProductLink(item.product);
+      window.open(link.href, "_blank", "noopener,noreferrer");
+    }
+
+    /* Build confirmation message */
+    const parts: string[] = [];
+    if (shopifyItems.length > 0) {
+      parts.push(`Added ${shopifyItems.length} ${shopifyItems.length === 1 ? "item" : "items"} to cart`);
+    }
+    if (amazonItems.length > 0) {
+      parts.push(`${amazonItems.length} Amazon ${amazonItems.length === 1 ? "item" : "items"} opened`);
+    }
+    setConfirmation(parts.join(" · "));
+  }, [shopifyItems, amazonItems, addItem]);
 
   return (
     <ScrollArea className="h-full">
@@ -202,7 +237,7 @@ export function WizardCartSidebar({
           </div>
         )}
 
-        {/* Subtotal + savings */}
+        {/* Subtotal + savings + tax note */}
         {items.length > 0 && (
           <div className="space-y-1 border-t border-border/50 pt-3">
             <div className="flex items-center justify-between">
@@ -219,19 +254,40 @@ export function WizardCartSidebar({
                 </span>
               </div>
             )}
+            <p className="text-[10px] text-muted-foreground">
+              Taxes and shipping calculated at checkout.
+              {hasAmazon && " Amazon items purchased separately."}
+            </p>
           </div>
         )}
 
-        {/* Open All Links */}
+        {/* Add to Cart / Open Amazon */}
         {items.length > 0 && (
-          <Button
-            onClick={handleOpenAllLinks}
-            className="w-full bg-aqua text-deep-blue hover:bg-aqua-dim"
-            size="sm"
-          >
-            <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-            Open All Product Links
-          </Button>
+          <div className="space-y-1.5">
+            <Button
+              onClick={handleAddToCart}
+              className="w-full bg-aqua text-deep-blue hover:bg-aqua-dim"
+              size="sm"
+            >
+              {hasShopify ? (
+                <>
+                  <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
+                  {hasAmazon ? "Add to Cart & Open Amazon" : "Add to Cart"}
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                  Open on Amazon
+                </>
+              )}
+            </Button>
+            {confirmation && (
+              <p className="flex items-center gap-1 text-[10px] text-green-400">
+                <Check className="h-3 w-3 shrink-0" />
+                {confirmation}
+              </p>
+            )}
+          </div>
         )}
 
         {/* Recommendations */}
