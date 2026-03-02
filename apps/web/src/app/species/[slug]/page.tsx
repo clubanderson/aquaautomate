@@ -29,7 +29,6 @@ import {
 } from "@/lib/aquarium/match-species";
 import { AMAZON_PRODUCTS } from "@/lib/commerce/amazon-catalog";
 import type { Compatibility } from "@/lib/aquarium/tank-mates";
-import { SITE_NAME } from "@/lib/constants";
 
 interface SpeciesPageProps {
   params: Promise<{ slug: string }>;
@@ -62,7 +61,7 @@ export async function generateMetadata({
   if (!care) return { title: "Species Not Found" };
 
   return {
-    title: `${care.speciesName} Care Sheet | ${SITE_NAME}`,
+    title: `${care.speciesName} Care Sheet`,
     description: care.summary,
   };
 }

@@ -5,7 +5,6 @@ import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DifficultyBadge } from "@/components/guide/difficulty-badge";
 import { getGuideBySlug, getAllGuideSlugs } from "@/lib/guides";
-import { SITE_NAME } from "@/lib/constants";
 import { GuideContent } from "./guide-content";
 
 interface GuidePageProps {
@@ -20,8 +19,19 @@ export async function generateMetadata({
   if (!guide) return { title: "Guide Not Found" };
 
   return {
-    title: `${guide.title} | ${SITE_NAME}`,
+    title: guide.title,
     description: guide.description,
+    openGraph: {
+      title: guide.title,
+      description: guide.description,
+      type: "article",
+      url: `https://aquaautomate.com/guides/${slug}`,
+    },
+    twitter: {
+      card: "summary",
+      title: guide.title,
+      description: guide.description,
+    },
   };
 }
 

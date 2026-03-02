@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getPostBySlug, getAllPostSlugs } from "@/lib/blog";
-import { SITE_NAME } from "@/lib/constants";
 import { GuideContent } from "@/app/guides/[slug]/guide-content";
 
 interface BlogPostPageProps {
@@ -19,8 +18,19 @@ export async function generateMetadata({
   if (!post) return { title: "Post Not Found" };
 
   return {
-    title: `${post.title} | ${SITE_NAME}`,
+    title: post.title,
     description: post.description,
+    openGraph: {
+      title: post.title,
+      description: post.description,
+      type: "article",
+      url: `https://aquaautomate.com/blog/${slug}`,
+    },
+    twitter: {
+      card: "summary",
+      title: post.title,
+      description: post.description,
+    },
   };
 }
 
