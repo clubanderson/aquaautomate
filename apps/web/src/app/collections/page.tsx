@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 import { DEMO_COLLECTIONS } from "@/lib/commerce/demo-data";
+import { AMAZON_PRODUCTS } from "@/lib/commerce/amazon-catalog";
 import { getAllProducts, getCollections } from "@/lib/shopify";
 import { normalizeShopifyCollection, normalizeShopifyProduct } from "@/lib/commerce/adapters/shopify";
 import { ProductGrid } from "@/components/product-grid";
@@ -65,6 +66,23 @@ const PRODUCT_TYPE_LABELS: Record<string, string> = {
   "DRY GOODS": "Dry Goods",
   "LIVE STOCK": "Live Stock",
   SHIPPING: "Shipping",
+  /* Amazon affiliate product types */
+  FILTER: "Filters",
+  HEATER: "Heaters",
+  "UV LIGHT": "UV Lights",
+  "AIR STONE": "Air Stones",
+  GRAVEL: "Gravel & Substrate",
+  "AIR PUMP": "Air Pumps",
+  "AIR DISTRIBUTION": "Air Distribution",
+  "AWC SYSTEM": "AWC Systems",
+  "PEX PLUMBING": "PEX Plumbing",
+  "AQUARIUM CONTROLS": "Aquarium Controls",
+  "SALT SYSTEM": "Salt Systems",
+  BACKGROUND: "Backgrounds",
+  "FISH FOOD": "Fish Food",
+  "AUTO FEEDER": "Auto Feeders",
+  TANK: "Tanks",
+  STAND: "Stands",
 };
 
 /** Merge synonymous product types into a single canonical key */
@@ -95,7 +113,6 @@ function groupProductsByType(products: NormalizedProduct[]): NormalizedCollectio
 
   return Array.from(groups.entries())
     .filter(([, prods]) => prods.length >= MIN_PRODUCTS_PER_GROUP)
-    .sort((a, b) => b[1].length - a[1].length)
     .map(([type, prods]) => {
       const vendors = [...new Set(prods.map((p) => p.vendor).filter(Boolean))];
       const vendorText = vendors.length > 0 ? vendors.join(", ") : "our suppliers";
@@ -106,7 +123,8 @@ function groupProductsByType(products: NormalizedProduct[]): NormalizedCollectio
         description: `${prods.length} products available from ${vendorText}`,
         products: prods,
       };
-    });
+    })
+    .sort((a, b) => a.title.localeCompare(b.title));
 }
 
 interface CollectionsPageProps {
@@ -140,14 +158,22 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
       const shopifyProducts = await getAllProducts();
       if (shopifyProducts.length > 0) {
         const normalized = shopifyProducts.map(normalizeShopifyProduct);
-        collections = groupProductsByType(normalized);
-        allProducts = normalized;
+        /* Merge Shopify + Amazon affiliate products, then group by type */
+        const combined = [...normalized, ...AMAZON_PRODUCTS];
+        collections = groupProductsByType(combined);
+        allProducts = combined;
       }
     }
 
     /* Collect all products for filtering */
     if (allProducts.length === 0) {
-      allProducts = collections.flatMap((c) => c.products);
+      allProducts = [...collections.flatMap((c) => c.products), ...AMAZON_PRODUCTS];
+    } else {
+      /* Ensure Amazon products are included even when using real collections */
+      const hasAmazon = allProducts.some((p) => p.source === "amazon");
+      if (!hasAmazon) {
+        allProducts = [...allProducts, ...AMAZON_PRODUCTS];
+      }
     }
   } catch {
     /* Shopify unavailable — use demo data */

@@ -1,8 +1,9 @@
 import type { NormalizedProduct, NormalizedCollection } from "./types";
+import { AMAZON_PRODUCTS } from "./amazon-catalog";
 
 /**
- * Demo products for development before Shopify/Amazon are connected.
- * These showcase the mixed-source product grid.
+ * Demo Shopify products for development before a real Shopify store is connected.
+ * Amazon affiliate products are sourced from the curated amazon-catalog.
  */
 export const DEMO_PRODUCTS: NormalizedProduct[] = [
   {
@@ -78,77 +79,6 @@ export const DEMO_PRODUCTS: NormalizedProduct[] = [
     inventoryStatus: "low-stock",
   },
   {
-    id: "demo-3",
-    handle: "hygger-full-spectrum-light-24",
-    title: 'Hygger Full Spectrum Aquarium Light 24"',
-    description:
-      "Programmable LED aquarium light with sunrise/sunset mode. Works great with Tuya smart plugs for Home Assistant automation.",
-    source: "amazon",
-    fulfillment: "amazon-affiliate",
-    tags: ["lighting", "automation-compatible", "freshwater", "planted-tank"],
-    images: [
-      {
-        url: "/images/demo/hygger-light.jpg",
-        altText: "Hygger full spectrum LED aquarium light",
-      },
-    ],
-    featuredImage: {
-      url: "/images/demo/hygger-light.jpg",
-      altText: "Hygger full spectrum LED aquarium light",
-    },
-    variants: [
-      {
-        id: "demo-3-v1",
-        title: '24" (18-24 gal)',
-        availableForSale: true,
-        price: { amount: "32.99", currencyCode: "USD" },
-      },
-    ],
-    price: { amount: "32.99", currencyCode: "USD" },
-    availableForSale: true,
-    externalUrl: "https://www.amazon.com/dp/B07XAMPLE?tag=aquaautomate-20",
-    sourceLabel: "Available on Amazon",
-    automationCompatible: true,
-    waterType: "freshwater",
-    totalQuantity: null,
-    inventoryStatus: "in-stock",
-  },
-  {
-    id: "demo-4",
-    handle: "tuya-smart-plug-4pack",
-    title: "Tuya Smart Plug (4-Pack)",
-    description:
-      "WiFi smart plugs with energy monitoring. Flashes with Tuya-Local firmware for full Home Assistant local control — no cloud required.",
-    source: "amazon",
-    fulfillment: "amazon-affiliate",
-    tags: ["automation", "smart-home", "home-assistant", "tuya"],
-    images: [
-      {
-        url: "/images/demo/tuya-plug.jpg",
-        altText: "Tuya smart plug 4-pack for aquarium automation",
-      },
-    ],
-    featuredImage: {
-      url: "/images/demo/tuya-plug.jpg",
-      altText: "Tuya smart plug 4-pack for aquarium automation",
-    },
-    variants: [
-      {
-        id: "demo-4-v1",
-        title: "4-Pack",
-        availableForSale: true,
-        price: { amount: "24.99", currencyCode: "USD" },
-      },
-    ],
-    price: { amount: "24.99", currencyCode: "USD" },
-    availableForSale: true,
-    externalUrl: "https://www.amazon.com/dp/B08XAMPLE?tag=aquaautomate-20",
-    sourceLabel: "Available on Amazon",
-    automationCompatible: true,
-    totalQuantity: null,
-    inventoryStatus: "in-stock",
-  },
-  {
     id: "demo-5",
     handle: "java-fern",
     title: "Java Fern (Microsorum pteropus)",
@@ -184,41 +114,8 @@ export const DEMO_PRODUCTS: NormalizedProduct[] = [
     totalQuantity: 0,
     inventoryStatus: "sold-out",
   },
-  {
-    id: "demo-6",
-    handle: "lutron-pico-remote",
-    title: "Lutron Pico Remote (5-Button)",
-    description:
-      "Wireless scene controller. Pair with Lutron Caseta bridge for Home Assistant tank scene control — one button for day, night, feeding modes.",
-    source: "amazon",
-    fulfillment: "amazon-affiliate",
-    tags: ["automation", "smart-home", "home-assistant", "lutron", "scenes"],
-    images: [
-      {
-        url: "/images/demo/lutron-pico.jpg",
-        altText: "Lutron Pico 5-button wireless remote for tank scenes",
-      },
-    ],
-    featuredImage: {
-      url: "/images/demo/lutron-pico.jpg",
-      altText: "Lutron Pico 5-button wireless remote for tank scenes",
-    },
-    variants: [
-      {
-        id: "demo-6-v1",
-        title: "Single Remote",
-        availableForSale: true,
-        price: { amount: "16.95", currencyCode: "USD" },
-      },
-    ],
-    price: { amount: "16.95", currencyCode: "USD" },
-    availableForSale: true,
-    externalUrl: "https://www.amazon.com/dp/B00XAMPLE?tag=aquaautomate-20",
-    sourceLabel: "Available on Amazon",
-    automationCompatible: true,
-    totalQuantity: null,
-    inventoryStatus: "in-stock",
-  },
+  /* Real Amazon affiliate products from the curated catalog */
+  ...AMAZON_PRODUCTS,
 ];
 
 /** Demo collections for development */

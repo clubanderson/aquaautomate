@@ -42,8 +42,9 @@ export const NAV_LINKS = [
   { label: "Shop", href: "/collections" },
   { label: "Plants", href: "/collections?cat=LIVE+PLANTS,PLANTS,PLANT,GARDEN+PLANTS,AQUATIC+PLANTS" },
   { label: "Driftwood", href: "/collections?cat=DRIFTWOOD" },
+  { label: "Equipment", href: "/collections?cat=FILTER,HEATER,AIR+PUMP,UV+LIGHT,TANK,STAND" },
+  { label: "Automation", href: "/collections?cat=AQUARIUM+CONTROLS,AWC+SYSTEM,AUTO+FEEDER" },
   { label: "Guides", href: "/guides" },
-  { label: "Automation", href: "/guides?category=automation" },
 ] as const;
 
 /** Product categories */
