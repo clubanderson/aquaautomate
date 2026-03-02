@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   ExternalLink,
+  Info,
   ShoppingCart,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -37,11 +39,26 @@ const STEP_PRODUCT_TYPES: Record<WizardStep, string[]> = {
   review: [],
 };
 
+/** Regex to extract gallon size from a product title */
+const GALLON_REGEX = /(\d+)\s*gallon/i;
+
+/** Parse gallon size from a tank product title */
+function extractGallons(title: string): number | null {
+  const match = title.match(GALLON_REGEX);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 function productHref(p: NormalizedProduct): string {
   return p.source === "amazon" ? (p.externalUrl ?? "#") : `/products/${p.handle}`;
 }
 
 export function TankWizard() {
+  const searchParams = useSearchParams();
+  /** Minimum tank size in gallons — passed from the tank calculator */
+  const minGallons = searchParams.get("minGallons")
+    ? Number(searchParams.get("minGallons"))
+    : null;
+
   const [currentStep, setCurrentStep] = useState(0);
   const [selections, setSelections] = useState<Record<WizardStep, NormalizedProduct | null>>({
     tank: null,
@@ -67,10 +84,18 @@ export function TankWizard() {
     if (currentStep > 0) setCurrentStep((p) => p - 1);
   };
 
-  /* Get products for current step */
-  const stepProducts = AMAZON_PRODUCTS.filter((p) =>
-    (STEP_PRODUCT_TYPES[step.id] || []).includes(p.productType || "")
-  );
+  /* Get products for current step — filter tanks by minimum gallon size */
+  const stepProducts = AMAZON_PRODUCTS.filter((p) => {
+    if (!(STEP_PRODUCT_TYPES[step.id] || []).includes(p.productType || "")) {
+      return false;
+    }
+    /* When a minimum gallon size was provided, only show tanks that meet it */
+    if (step.id === "tank" && minGallons) {
+      const gallons = extractGallons(p.title);
+      if (gallons !== null && gallons < minGallons) return false;
+    }
+    return true;
+  });
 
   /* Calculate total cost */
   const selectedProducts = Object.entries(selections)
@@ -185,6 +210,20 @@ export function TankWizard() {
           <h2 className="text-xl font-bold capitalize">
             Choose a {step.label}
           </h2>
+
+          {/* Info banner when filtering tanks by minimum size */}
+          {step.id === "tank" && minGallons && (
+            <div className="flex items-center gap-2 rounded-md border border-aqua/20 bg-aqua/5 px-3 py-2 text-xs text-muted-foreground">
+              <Info className="h-3.5 w-3.5 shrink-0 text-aqua" />
+              <span>
+                Showing tanks{" "}
+                <span className="font-medium text-foreground">
+                  {minGallons}+ gallons
+                </span>{" "}
+                based on your stocking calculator results.
+              </span>
+            </div>
+          )}
 
           {selections[step.id] && (
             <div className="rounded-lg border border-aqua/30 bg-aqua/5 p-3">

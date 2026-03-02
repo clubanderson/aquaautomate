@@ -410,7 +410,7 @@ export function TankCalculator() {
           </div>
 
           <Button variant="outline" className="border-aqua/30 text-aqua" asChild>
-            <Link href="/tools/build-your-tank">
+            <Link href={`/tools/build-your-tank?minGallons=${recommendedSize}`}>
               Build a complete setup with these fish &rarr;
             </Link>
           </Button>

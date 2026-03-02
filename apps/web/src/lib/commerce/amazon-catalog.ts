@@ -347,6 +347,7 @@ const PEX_PLUMBING: NormalizedProduct[] = [
     vendor: "SharkBite",
     productType: "PEX PLUMBING",
     tags: ["pex", "plumbing", "tubing", "awc", "equipment"],
+    waterType: "both",
   }),
   createAmazonProduct({
     asin: "B01AS48PBS",
@@ -358,6 +359,7 @@ const PEX_PLUMBING: NormalizedProduct[] = [
     vendor: "SharkBite",
     productType: "PEX PLUMBING",
     tags: ["pex", "plumbing", "fitting", "elbow", "equipment"],
+    waterType: "both",
   }),
   createAmazonProduct({
     asin: "B007AGM6FO",
@@ -369,6 +371,7 @@ const PEX_PLUMBING: NormalizedProduct[] = [
     vendor: "SharkBite",
     productType: "PEX PLUMBING",
     tags: ["pex", "plumbing", "crimp", "fitting", "equipment"],
+    waterType: "both",
   }),
   createAmazonProduct({
     asin: "B018VNUCSC",
@@ -380,6 +383,7 @@ const PEX_PLUMBING: NormalizedProduct[] = [
     vendor: "iCrimp",
     productType: "PEX PLUMBING",
     tags: ["pex", "plumbing", "tool", "crimp", "equipment"],
+    waterType: "both",
   }),
   createAmazonProduct({
     asin: "B0C4VWXHDW",
@@ -391,6 +395,7 @@ const PEX_PLUMBING: NormalizedProduct[] = [
     vendor: "SharkBite",
     productType: "PEX PLUMBING",
     tags: ["pex", "plumbing", "valve", "shutoff", "equipment"],
+    waterType: "both",
   }),
 ];
 
@@ -410,6 +415,7 @@ const AQUARIUM_CONTROLS: NormalizedProduct[] = [
     productType: "AQUARIUM CONTROLS",
     tags: ["controller", "temperature", "wifi", "tuya", "automation", "home-assistant", "equipment"],
     automationCompatible: true,
+    waterType: "both",
   }),
   createAmazonProduct({
     asin: "B086WXTQNP",
@@ -422,6 +428,7 @@ const AQUARIUM_CONTROLS: NormalizedProduct[] = [
     productType: "AQUARIUM CONTROLS",
     tags: ["smart-plug", "power-strip", "tuya", "wifi", "automation", "home-assistant", "equipment"],
     automationCompatible: true,
+    waterType: "both",
   }),
   createAmazonProduct({
     asin: "B0D6GNQMDG",
@@ -434,6 +441,7 @@ const AQUARIUM_CONTROLS: NormalizedProduct[] = [
     productType: "AQUARIUM CONTROLS",
     tags: ["smart-plug", "shelly", "wifi", "automation", "home-assistant", "local-control", "equipment"],
     automationCompatible: true,
+    waterType: "both",
   }),
   createAmazonProduct({
     asin: "B0BF3J1FJG",
@@ -446,6 +454,7 @@ const AQUARIUM_CONTROLS: NormalizedProduct[] = [
     productType: "AQUARIUM CONTROLS",
     tags: ["relay", "shelly", "wifi", "automation", "home-assistant", "local-control", "equipment"],
     automationCompatible: true,
+    waterType: "both",
   }),
   createAmazonProduct({
     asin: "B00KLAXFQ0",
@@ -458,6 +467,7 @@ const AQUARIUM_CONTROLS: NormalizedProduct[] = [
     productType: "AQUARIUM CONTROLS",
     tags: ["remote", "lutron", "scenes", "automation", "home-assistant", "equipment"],
     automationCompatible: true,
+    waterType: "both",
   }),
   createAmazonProduct({
     asin: "B00XPW67ZM",
@@ -470,6 +480,7 @@ const AQUARIUM_CONTROLS: NormalizedProduct[] = [
     productType: "AQUARIUM CONTROLS",
     tags: ["hub", "lutron", "bridge", "automation", "home-assistant", "equipment"],
     automationCompatible: true,
+    waterType: "both",
   }),
 ];
 
@@ -702,6 +713,19 @@ const AUTO_FEEDERS: NormalizedProduct[] = [
 /* ------------------------------------------------------------------ */
 
 const TANKS: NormalizedProduct[] = [
+  /* --- Small: 5–10 gallon ----------------------------------------- */
+  createAmazonProduct({
+    asin: "B00O8SZTKQ",
+    title: "Marineland Portrait Glass LED Aquarium Kit — 5 Gallon",
+    description:
+      "Sleek portrait-style glass aquarium with hidden filtration and bright LED lighting. Hinged light and sliding glass canopy. Perfect for bettas and nano setups.",
+    price: "69.99",
+    imageUrl: "https://m.media-amazon.com/images/I/71pfSJhbJxL._AC_SL1500_.jpg",
+    vendor: "Marineland",
+    productType: "TANK",
+    tags: ["tank", "nano", "kit", "led", "5-gallon", "freshwater", "equipment"],
+    waterType: "freshwater",
+  }),
   createAmazonProduct({
     asin: "B01MRIQW7K",
     title: "Fluval Flex 9 Gallon Aquarium Kit — LED & Filtration Included",
@@ -711,7 +735,7 @@ const TANKS: NormalizedProduct[] = [
     imageUrl: "https://m.media-amazon.com/images/I/81uCo3jczlL._AC_SL1500_.jpg",
     vendor: "Fluval",
     productType: "TANK",
-    tags: ["tank", "nano", "kit", "led", "freshwater", "equipment"],
+    tags: ["tank", "nano", "kit", "led", "9-gallon", "freshwater", "equipment"],
     waterType: "freshwater",
   }),
   createAmazonProduct({
@@ -723,9 +747,22 @@ const TANKS: NormalizedProduct[] = [
     imageUrl: "https://m.media-amazon.com/images/I/71cLcaNgpyL._AC_SL1500_.jpg",
     vendor: "Aqueon",
     productType: "TANK",
-    tags: ["tank", "glass", "starter", "freshwater", "saltwater", "equipment"],
+    tags: ["tank", "glass", "starter", "10-gallon", "freshwater", "saltwater", "equipment"],
     waterType: "both",
   }),
+  createAmazonProduct({
+    asin: "B0013JSCIG",
+    title: "Tetra Crescent Acrylic Aquarium Kit — 5 Gallon",
+    description:
+      "Curved-front acrylic aquarium with Whisper internal filter and hidden LED lighting. Seamless design gives an unobstructed view. Great for desktops and countertops.",
+    price: "42.99",
+    imageUrl: "https://m.media-amazon.com/images/I/81n4E3GhVjL._AC_SL1500_.jpg",
+    vendor: "Tetra",
+    productType: "TANK",
+    tags: ["tank", "nano", "acrylic", "kit", "5-gallon", "freshwater", "equipment"],
+    waterType: "freshwater",
+  }),
+  /* --- Medium: 20–30 gallon --------------------------------------- */
   createAmazonProduct({
     asin: "B0002AS3RG",
     title: "Aqueon Standard Glass Aquarium Tank — 20 Gallon Long",
@@ -735,7 +772,141 @@ const TANKS: NormalizedProduct[] = [
     imageUrl: "https://m.media-amazon.com/images/I/51THjS0hYgL._AC_SL1048_.jpg",
     vendor: "Aqueon",
     productType: "TANK",
-    tags: ["tank", "glass", "community", "freshwater", "saltwater", "equipment"],
+    tags: ["tank", "glass", "community", "20-gallon", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B013BXDZ90",
+    title: "Tetra Complete Aquarium Kit — 20 Gallon with LED, Filter & Heater",
+    description:
+      "All-in-one 20 gallon kit with LED hood, Whisper filter, heater, and accessories. Everything you need to start a tropical community tank right out of the box.",
+    price: "89.99",
+    imageUrl: "https://m.media-amazon.com/images/I/81RrQSzWjNL._AC_SL1500_.jpg",
+    vendor: "Tetra",
+    productType: "TANK",
+    tags: ["tank", "kit", "20-gallon", "led", "heater", "freshwater", "equipment"],
+    waterType: "freshwater",
+  }),
+  createAmazonProduct({
+    asin: "B0002AS226",
+    title: "Aqueon Standard Glass Aquarium Tank — 29 Gallon",
+    description:
+      "The 29 gallon is a popular mid-size tank for community setups. Same footprint as a 20 long but taller — great for angelfish and taller aquascapes. Clean silicone seams.",
+    price: "54.99",
+    imageUrl: "https://m.media-amazon.com/images/I/317Gj6qU1oL._AC_SL1500_.jpg",
+    vendor: "Aqueon",
+    productType: "TANK",
+    tags: ["tank", "glass", "community", "29-gallon", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B09Y716CJC",
+    title: "Tetra Complete LED Aquarium Kit — 29 Gallon with Filter & Heater",
+    description:
+      "Complete 29 gallon setup with LED lighting, Whisper filtration, heater, and thermometer. Scratch-resistant glass and low-profile hood. Ready to fill and stock.",
+    price: "129.99",
+    imageUrl: "https://m.media-amazon.com/images/I/81Y5BkrxjsL._AC_SL1500_.jpg",
+    vendor: "Tetra",
+    productType: "TANK",
+    tags: ["tank", "kit", "29-gallon", "led", "heater", "freshwater", "equipment"],
+    waterType: "freshwater",
+  }),
+  /* --- Large: 40–55 gallon ---------------------------------------- */
+  createAmazonProduct({
+    asin: "B0002AS23U",
+    title: "Aqueon Standard Glass Aquarium — 40 Gallon Breeder",
+    description:
+      "The 40 gallon breeder is the gold standard for serious fishkeepers. Extra-wide footprint (36×18×16) gives ample swimming room and floor space for bottom dwellers.",
+    price: "99.99",
+    imageUrl: "https://m.media-amazon.com/images/I/31Giq9LTSRL._AC_SL1500_.jpg",
+    vendor: "Aqueon",
+    productType: "TANK",
+    tags: ["tank", "glass", "breeder", "40-gallon", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B000634H46",
+    title: "SeaClear 40 Gallon Acrylic Aquarium Combo Set",
+    description:
+      "Crystal-clear acrylic aquarium with reflector and light fixture. 17x lighter than glass, virtually unbreakable. Includes 24-inch light fixture. 36×15×16 inches.",
+    price: "289.99",
+    imageUrl: "https://m.media-amazon.com/images/I/41EWCYWCP2L._AC_SL1500_.jpg",
+    vendor: "SeaClear",
+    productType: "TANK",
+    tags: ["tank", "acrylic", "40-gallon", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B0002AS24Y",
+    title: "Aqueon Standard Glass Aquarium Tank — 55 Gallon",
+    description:
+      "The 55 gallon is the classic large community tank. Dimensions (48×13×21) give plenty of length for schooling fish. Sturdy glass construction with clean silicone seams.",
+    price: "124.99",
+    imageUrl: "https://m.media-amazon.com/images/I/317Gj6qU1oL._AC_SL1500_.jpg",
+    vendor: "Aqueon",
+    productType: "TANK",
+    tags: ["tank", "glass", "community", "55-gallon", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B0006JLPG8",
+    title: "SeaClear 50 Gallon Acrylic Aquarium Combo Set",
+    description:
+      "Large acrylic aquarium with combo set including reflector and light fixture. Crystal clear viewing, lightweight construction. 36×15×20 inches. Ideal for living rooms.",
+    price: "389.99",
+    imageUrl: "https://m.media-amazon.com/images/I/41EWCYWCP2L._AC_SL1500_.jpg",
+    vendor: "SeaClear",
+    productType: "TANK",
+    tags: ["tank", "acrylic", "50-gallon", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  /* --- Extra Large: 75–125 gallon --------------------------------- */
+  createAmazonProduct({
+    asin: "B0002AS25S",
+    title: "Aqueon Standard Glass Aquarium Tank — 75 Gallon",
+    description:
+      "Step up to the 75 gallon for serious community or cichlid setups. Dimensions (48×18×21) provide depth and height for larger species. Heavy-duty glass panels.",
+    price: "349.99",
+    imageUrl: "https://m.media-amazon.com/images/I/317Gj6qU1oL._AC_SL1500_.jpg",
+    vendor: "Aqueon",
+    productType: "TANK",
+    tags: ["tank", "glass", "large", "75-gallon", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B0002DJINY",
+    title: "SeaClear 75 Gallon Acrylic Aquarium Combo Set",
+    description:
+      "Premium 75 gallon acrylic aquarium with reflector and light fixture. Clearer than glass, impact-resistant, and significantly lighter. 48×15×20 inches.",
+    price: "699.99",
+    imageUrl: "https://m.media-amazon.com/images/I/41EWCYWCP2L._AC_SL1500_.jpg",
+    vendor: "SeaClear",
+    productType: "TANK",
+    tags: ["tank", "acrylic", "large", "75-gallon", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B000260JLW",
+    title: "SeaClear 100 Gallon Acrylic Aquarium Combo Set",
+    description:
+      "Showpiece 100 gallon acrylic tank with combo reflector and light. Perfect for large cichlids, monster fish, or stunning reef displays. 60×18×18 inches.",
+    price: "899.99",
+    imageUrl: "https://m.media-amazon.com/images/I/41EWCYWCP2L._AC_SL1500_.jpg",
+    vendor: "SeaClear",
+    productType: "TANK",
+    tags: ["tank", "acrylic", "extra-large", "100-gallon", "freshwater", "saltwater", "equipment"],
+    waterType: "both",
+  }),
+  createAmazonProduct({
+    asin: "B004HSQRK8",
+    title: "Aqueon Standard Glass Aquarium Tank — 125 Gallon",
+    description:
+      "The ultimate display tank. 72×18×22 inches — enough room for large schools, big cichlids, or an impressive planted aquascape. Requires a sturdy stand rated for 1,000+ lbs.",
+    price: "499.99",
+    imageUrl: "https://m.media-amazon.com/images/I/317Gj6qU1oL._AC_SL1500_.jpg",
+    vendor: "Aqueon",
+    productType: "TANK",
+    tags: ["tank", "glass", "extra-large", "125-gallon", "freshwater", "saltwater", "equipment"],
     waterType: "both",
   }),
 ];
