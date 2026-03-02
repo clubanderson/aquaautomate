@@ -410,7 +410,11 @@ export function TankCalculator() {
           </div>
 
           <Button variant="outline" className="border-aqua/30 text-aqua" asChild>
-            <Link href={`/tools/build-your-tank?minGallons=${recommendedSize}`}>
+            <Link
+              href={`/tools/build-your-tank?minGallons=${recommendedSize}&fish=${selected
+                .map((s) => `${encodeURIComponent(s.species)}:${s.count}`)
+                .join(",")}`}
+            >
               Build a complete setup with these fish &rarr;
             </Link>
           </Button>

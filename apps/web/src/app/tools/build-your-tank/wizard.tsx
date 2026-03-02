@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -10,12 +10,18 @@ import {
   Check,
   ExternalLink,
   Info,
-  ShoppingCart,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AMAZON_PRODUCTS } from "@/lib/commerce/amazon-catalog";
+import { getWizardRecommendations } from "@/lib/commerce/wizard-recommendations";
 import type { NormalizedProduct } from "@/lib/commerce/types";
+import {
+  WizardCartSidebar,
+  type WizardCartItem,
+  type WizardFishSelection,
+} from "./wizard-cart-sidebar";
+import { WizardMobileCart } from "./wizard-mobile-cart";
 
 /** Wizard step identifiers */
 type WizardStep = "tank" | "filter" | "heater" | "light" | "substrate" | "review";
@@ -139,10 +145,16 @@ const UPTO_GALLON_REGEX = /up\s*to\s*(\d+)\s*gallon/i;
 /** Steps that should be filtered by the selected tank size */
 const SIZE_FILTERED_STEPS: WizardStep[] = ["filter", "heater"];
 
+/** Steps that have product selections (excludes review) */
+const SELECTABLE_STEPS = STEPS.filter((s) => s.id !== "review");
+
+/** Radix for parseInt */
+const PARSE_INT_RADIX = 10;
+
 /** Parse gallon size from a tank product title */
 function extractGallons(title: string): number | null {
   const match = title.match(GALLON_REGEX);
-  return match ? parseInt(match[1], 10) : null;
+  return match ? parseInt(match[1], PARSE_INT_RADIX) : null;
 }
 
 /**
@@ -156,11 +168,11 @@ function extractGallons(title: string): number | null {
 function extractGallonRange(title: string): [number, number] | null {
   const rangeMatch = title.match(RANGE_GALLON_REGEX);
   if (rangeMatch) {
-    return [parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10)];
+    return [parseInt(rangeMatch[1], PARSE_INT_RADIX), parseInt(rangeMatch[2], PARSE_INT_RADIX)];
   }
   const uptoMatch = title.match(UPTO_GALLON_REGEX);
   if (uptoMatch) {
-    return [0, parseInt(uptoMatch[1], 10)];
+    return [0, parseInt(uptoMatch[1], PARSE_INT_RADIX)];
   }
   return null;
 }
@@ -177,8 +189,22 @@ function isAccessoryCompatible(product: NormalizedProduct, tankGallons: number):
   return tankGallons >= min && tankGallons <= max;
 }
 
-function productHref(p: NormalizedProduct): string {
-  return p.source === "amazon" ? (p.externalUrl ?? "#") : `/products/${p.handle}`;
+/**
+ * Parse fish selections from URL param.
+ * Format: "Neon+Tetra:6,Guppy:3"
+ */
+function parseFishParam(fishParam: string | null): WizardFishSelection[] {
+  if (!fishParam) return [];
+  return fishParam.split(",").reduce<WizardFishSelection[]>((acc, entry) => {
+    const colonIdx = entry.lastIndexOf(":");
+    if (colonIdx <= 0) return acc;
+    const species = decodeURIComponent(entry.slice(0, colonIdx)).trim();
+    const count = parseInt(entry.slice(colonIdx + 1), PARSE_INT_RADIX);
+    if (species && !Number.isNaN(count) && count > 0) {
+      acc.push({ species, count });
+    }
+    return acc;
+  }, []);
 }
 
 export function TankWizard() {
@@ -187,6 +213,12 @@ export function TankWizard() {
   const minGallons = searchParams.get("minGallons")
     ? Number(searchParams.get("minGallons"))
     : null;
+
+  /** Fish selections carried over from the tank calculator */
+  const fishSelections = useMemo(
+    () => parseFishParam(searchParams.get("fish")),
+    [searchParams],
+  );
 
   const [currentStep, setCurrentStep] = useState(0);
   const [selections, setSelections] = useState<Record<WizardStep, NormalizedProduct | null>>({
@@ -211,6 +243,17 @@ export function TankWizard() {
 
   const goBack = () => {
     if (currentStep > 0) setCurrentStep((p) => p - 1);
+  };
+
+  /** Remove a selection and navigate to that step */
+  const removeSelection = (stepId: string) => {
+    setSelections((prev) => ({ ...prev, [stepId]: null }));
+  };
+
+  /** Jump to a specific step by its ID */
+  const goToStep = (stepId: string) => {
+    const idx = STEPS.findIndex((s) => s.id === stepId);
+    if (idx >= 0) setCurrentStep(idx);
   };
 
   /* Derive the selected tank size (used to filter accessories) */
@@ -246,305 +289,306 @@ export function TankWizard() {
     return Number(a.price.amount) - Number(b.price.amount);
   });
 
-  /* Calculate total cost */
-  const selectedProducts = Object.entries(selections)
-    .filter(([key, val]) => key !== "review" && val !== null)
-    .map(([, val]) => val!);
-  const totalCost = selectedProducts.reduce(
-    (sum, p) => sum + Number(p.price.amount),
-    0
+  /* Derive cart items from selections */
+  const cartItems: WizardCartItem[] = useMemo(
+    () =>
+      SELECTABLE_STEPS.reduce<WizardCartItem[]>((acc, s) => {
+        const product = selections[s.id];
+        if (product) {
+          acc.push({ stepId: s.id, stepLabel: s.label, product });
+        }
+        return acc;
+      }, []),
+    [selections],
   );
 
+  /* Get recommendations for empty steps */
+  const recommendations = useMemo(
+    () => getWizardRecommendations(selections, AMAZON_PRODUCTS, step.id),
+    [selections, step.id],
+  );
+
+  /* Get automation guides for the current step */
+  const currentStepGuides = useMemo(
+    () => STEP_GUIDES[step.id] || [],
+    [step.id],
+  );
+
+  /* Collect all relevant guides for the review step (deduped) */
+  const reviewGuides = useMemo(() => {
+    if (!isReview) return [];
+    return Array.from(
+      new Map(
+        Object.keys(selections)
+          .filter((key) => key !== "review" && selections[key as WizardStep] !== null)
+          .flatMap((key) => STEP_GUIDES[key as WizardStep] || [])
+          .concat(STEP_GUIDES.review || [])
+          .map((g) => [g.slug, g] as const),
+      ).values(),
+    );
+  }, [isReview, selections]);
+
+  /* Guides to pass to sidebar: step-specific during selection, all during review */
+  const sidebarGuides = isReview ? reviewGuides : currentStepGuides;
+
+  /** Open all selected products on Amazon in new tabs */
+  const handleOpenAllOnAmazon = () => {
+    for (const item of cartItems) {
+      if (item.product.externalUrl) {
+        window.open(item.product.externalUrl, "_blank", "noopener,noreferrer");
+      }
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Step indicator */}
-      <div className="flex items-center gap-1 overflow-x-auto">
-        {STEPS.map((s, i) => (
-          <button
-            key={s.id}
-            onClick={() => setCurrentStep(i)}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              i === currentStep
-                ? "bg-aqua/20 text-aqua"
-                : i < currentStep
-                  ? "bg-green-600/20 text-green-400"
-                  : "bg-card/50 text-muted-foreground"
-            }`}
-          >
-            {i < currentStep ? (
-              <Check className="h-3 w-3" />
-            ) : (
-              <span>{i + 1}</span>
-            )}
-            {s.label}
-          </button>
-        ))}
-      </div>
+    <>
+      <div className="flex gap-6">
+        {/* Left: Wizard steps */}
+        <div className="min-w-0 flex-1 space-y-6">
+          {/* Step indicator */}
+          <div className="flex items-center gap-1 overflow-x-auto">
+            {STEPS.map((s, i) => (
+              <button
+                key={s.id}
+                onClick={() => setCurrentStep(i)}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  i === currentStep
+                    ? "bg-aqua/20 text-aqua"
+                    : i < currentStep
+                      ? "bg-green-600/20 text-green-400"
+                      : "bg-card/50 text-muted-foreground"
+                }`}
+              >
+                {i < currentStep ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <span>{i + 1}</span>
+                )}
+                {s.label}
+              </button>
+            ))}
+          </div>
 
-      {/* Review step */}
-      {isReview ? (
-        <div className="space-y-4">
-          <div className="rounded-lg border border-aqua/30 bg-card/50 p-6">
-            <h2 className="mb-4 text-xl font-bold">
-              <ShoppingCart className="mr-2 inline h-5 w-5 text-aqua" />
-              Your Shopping List
-            </h2>
-
-            {selectedProducts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No products selected. Go back and pick your equipment.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {selectedProducts.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between rounded-lg border border-border/50 bg-card/30 p-3"
-                  >
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{p.title}</p>
-                      <Badge
-                        variant="secondary"
-                        className="mt-1 text-[10px] capitalize"
-                      >
-                        {(p.productType || "").toLowerCase()}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-aqua">
-                        ${p.price.amount}
-                      </span>
-                      <a
-                        href={productHref(p)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="rounded-md border border-border/50 p-1.5 text-muted-foreground hover:border-aqua/30 hover:text-aqua"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    </div>
+          {/* Review step */}
+          {isReview ? (
+            <div className="space-y-4">
+              {/* Automate Your Setup — guides */}
+              {cartItems.length > 0 && (
+                <div className="rounded-lg border border-border/50 bg-card/30 p-4">
+                  <div className="mb-3 flex items-center gap-1.5 text-sm font-medium">
+                    <BookOpen className="h-4 w-4 text-aqua" />
+                    Automate Your Setup
                   </div>
-                ))}
-
-                <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-4">
-                  <span className="text-lg font-semibold">Estimated Total</span>
-                  <span className="text-2xl font-bold text-aqua">
-                    ${totalCost.toFixed(2)}
-                  </span>
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    These guides show you how to automate the equipment you selected with Home Assistant, Tuya smart plugs, and Shelly power monitors.
+                  </p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {reviewGuides.map((guide) => (
+                      <Link
+                        key={guide.slug}
+                        href={`/guides/${guide.slug}`}
+                        className="group flex items-start gap-2 rounded-md border border-border/30 bg-card/50 p-2.5 transition-colors hover:border-aqua/30 hover:bg-aqua/5"
+                      >
+                        <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-aqua" />
+                        <div>
+                          <p className="text-xs font-medium group-hover:text-aqua">
+                            {guide.title}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {guide.description}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
 
-          {/* Recommended guides based on selected products */}
-          {selectedProducts.length > 0 && (
-            <div className="rounded-lg border border-border/50 bg-card/30 p-4">
-              <div className="mb-3 flex items-center gap-1.5 text-sm font-medium">
-                <BookOpen className="h-4 w-4 text-aqua" />
-                Automate Your Setup
-              </div>
-              <p className="mb-3 text-xs text-muted-foreground">
-                These guides show you how to automate the equipment you selected with Home Assistant, Tuya smart plugs, and Shelly power monitors.
-              </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {/* Deduplicate guides across all steps including review dashboard guides */}
-                {Array.from(
-                  new Map(
-                    Object.keys(selections)
-                      .filter((key) => key !== "review" && selections[key as WizardStep] !== null)
-                      .flatMap((key) => STEP_GUIDES[key as WizardStep] || [])
-                      .concat(STEP_GUIDES.review || [])
-                      .map((g) => [g.slug, g])
-                  ).values()
-                ).map((guide) => (
-                  <Link
-                    key={guide.slug}
-                    href={`/guides/${guide.slug}`}
-                    className="group flex items-start gap-2 rounded-md border border-border/30 bg-card/50 p-2.5 transition-colors hover:border-aqua/30 hover:bg-aqua/5"
-                  >
-                    <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-aqua" />
-                    <div>
-                      <p className="text-xs font-medium group-hover:text-aqua">
-                        {guide.title}
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        {guide.description}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+              {/* Open All on Amazon — prominent CTA */}
+              {cartItems.length > 0 && (
+                <Button
+                  onClick={handleOpenAllOnAmazon}
+                  className="w-full bg-aqua text-deep-blue hover:bg-aqua-dim sm:w-auto"
+                  size="lg"
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open All on Amazon
+                </Button>
+              )}
 
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={goBack}
-              className="border-border/50"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-            <Button className="bg-aqua text-deep-blue hover:bg-aqua-dim" asChild>
-              <Link href="/tools/tank-calculator">
-                Check compatibility with the Tank Calculator
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      ) : (
-        /* Product selection step */
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold capitalize">
-            Choose a {step.label}
-          </h2>
-
-          {/* Info banner when filtering tanks by minimum size */}
-          {step.id === "tank" && minGallons && (
-            <div className="flex items-center gap-2 rounded-md border border-aqua/20 bg-aqua/5 px-3 py-2 text-xs text-muted-foreground">
-              <Info className="h-3.5 w-3.5 shrink-0 text-aqua" />
-              <span>
-                Showing tanks{" "}
-                <span className="font-medium text-foreground">
-                  {minGallons}+ gallons
-                </span>{" "}
-                based on your stocking calculator results.
-              </span>
-            </div>
-          )}
-
-          {/* Info banner when filtering accessories by selected tank size */}
-          {SIZE_FILTERED_STEPS.includes(step.id) && selectedTankGallons && (
-            <div className="flex items-center gap-2 rounded-md border border-aqua/20 bg-aqua/5 px-3 py-2 text-xs text-muted-foreground">
-              <Info className="h-3.5 w-3.5 shrink-0 text-aqua" />
-              <span>
-                Showing {step.label.toLowerCase()}s rated for your{" "}
-                <span className="font-medium text-foreground">
-                  {selectedTankGallons}-gallon
-                </span>{" "}
-                tank.
-              </span>
-            </div>
-          )}
-
-          {selections[step.id] && (
-            <div className="rounded-lg border border-aqua/30 bg-aqua/5 p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">Selected:</p>
-                  <p className="text-sm font-medium text-aqua">
-                    {selections[step.id]!.title}
+              {cartItems.length === 0 && (
+                <div className="rounded-lg border border-border/50 bg-card/50 p-6 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No products selected. Go back and pick your equipment.
                   </p>
                 </div>
-                <span className="text-sm font-medium text-aqua">
-                  ${selections[step.id]!.price.amount}
-                </span>
-              </div>
-            </div>
-          )}
+              )}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {stepProducts.map((p) => {
-              const isSelected = selections[step.id]?.id === p.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => selectProduct(p)}
-                  className={`rounded-lg border p-4 text-left transition-all ${
-                    isSelected
-                      ? "border-aqua/50 bg-aqua/5"
-                      : "border-border/50 bg-card/50 hover:border-aqua/30"
-                  }`}
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={goBack}
+                  className="border-border/50"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{p.title}</p>
-                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                        {p.description}
-                      </p>
-                    </div>
-                    {isSelected && (
-                      <Check className="ml-2 mt-0.5 h-4 w-4 shrink-0 text-aqua" />
-                    )}
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-sm font-medium text-aqua">
-                      ${p.price.amount}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      {p.automationCompatible && (
-                        <Badge className="bg-green-600/20 text-green-400 text-[10px] border-green-600/30">
-                          HA Ready
-                        </Badge>
-                      )}
-                      <Badge variant="secondary" className="text-[10px]">
-                        {p.vendor}
-                      </Badge>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {stepProducts.length === 0 && (
-            <p className="rounded-lg border border-border/50 bg-card/50 p-6 text-center text-sm text-muted-foreground">
-              No products in this category yet. You can skip this step.
-            </p>
-          )}
-
-          {/* Related automation guides for this step */}
-          {(STEP_GUIDES[step.id] || []).length > 0 && (
-            <div className="rounded-lg border border-border/50 bg-card/30 p-4">
-              <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <BookOpen className="h-3.5 w-3.5" />
-                Automation Guides
-              </div>
-              <div className="space-y-2">
-                {(STEP_GUIDES[step.id] || []).map((guide) => (
-                  <Link
-                    key={guide.slug}
-                    href={`/guides/${guide.slug}`}
-                    className="group flex items-start gap-2 rounded-md border border-border/30 bg-card/50 p-2.5 transition-colors hover:border-aqua/30 hover:bg-aqua/5"
-                  >
-                    <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-aqua" />
-                    <div>
-                      <p className="text-xs font-medium group-hover:text-aqua">
-                        {guide.title}
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        {guide.description}
-                      </p>
-                    </div>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <Button className="bg-aqua text-deep-blue hover:bg-aqua-dim" asChild>
+                  <Link href="/tools/tank-calculator">
+                    Check compatibility with the Tank Calculator
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
-                ))}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Product selection step */
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold capitalize">
+                Choose a {step.label}
+              </h2>
+
+              {/* Info banner when filtering tanks by minimum size */}
+              {step.id === "tank" && minGallons && (
+                <div className="flex items-center gap-2 rounded-md border border-aqua/20 bg-aqua/5 px-3 py-2 text-xs text-muted-foreground">
+                  <Info className="h-3.5 w-3.5 shrink-0 text-aqua" />
+                  <span>
+                    Showing tanks{" "}
+                    <span className="font-medium text-foreground">
+                      {minGallons}+ gallons
+                    </span>{" "}
+                    based on your stocking calculator results.
+                  </span>
+                </div>
+              )}
+
+              {/* Info banner when filtering accessories by selected tank size */}
+              {SIZE_FILTERED_STEPS.includes(step.id) && selectedTankGallons && (
+                <div className="flex items-center gap-2 rounded-md border border-aqua/20 bg-aqua/5 px-3 py-2 text-xs text-muted-foreground">
+                  <Info className="h-3.5 w-3.5 shrink-0 text-aqua" />
+                  <span>
+                    Showing {step.label.toLowerCase()}s rated for your{" "}
+                    <span className="font-medium text-foreground">
+                      {selectedTankGallons}-gallon
+                    </span>{" "}
+                    tank.
+                  </span>
+                </div>
+              )}
+
+              {selections[step.id] && (
+                <div className="rounded-lg border border-aqua/30 bg-aqua/5 p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Selected:</p>
+                      <p className="text-sm font-medium text-aqua">
+                        {selections[step.id]!.title}
+                      </p>
+                    </div>
+                    <span className="text-sm font-medium text-aqua">
+                      ${selections[step.id]!.price.amount}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {stepProducts.map((p) => {
+                  const isSelected = selections[step.id]?.id === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => selectProduct(p)}
+                      className={`rounded-lg border p-4 text-left transition-all ${
+                        isSelected
+                          ? "border-aqua/50 bg-aqua/5"
+                          : "border-border/50 bg-card/50 hover:border-aqua/30"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{p.title}</p>
+                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                            {p.description}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <Check className="ml-2 mt-0.5 h-4 w-4 shrink-0 text-aqua" />
+                        )}
+                      </div>
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-sm font-medium text-aqua">
+                          ${p.price.amount}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {p.automationCompatible && (
+                            <Badge className="bg-green-600/20 text-green-400 text-[10px] border-green-600/30">
+                              HA Ready
+                            </Badge>
+                          )}
+                          <Badge variant="secondary" className="text-[10px]">
+                            {p.vendor}
+                          </Badge>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {stepProducts.length === 0 && (
+                <p className="rounded-lg border border-border/50 bg-card/50 p-6 text-center text-sm text-muted-foreground">
+                  No products in this category yet. You can skip this step.
+                </p>
+              )}
+
+              <div className="flex items-center gap-3">
+                {currentStep > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={goBack}
+                    className="border-border/50"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
+                )}
+                <Button
+                  onClick={goNext}
+                  className="bg-aqua text-deep-blue hover:bg-aqua-dim"
+                >
+                  {selections[step.id] ? "Next" : "Skip"}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </div>
             </div>
           )}
+        </div>
 
-          <div className="flex items-center gap-3">
-            {currentStep > 0 && (
-              <Button
-                variant="outline"
-                onClick={goBack}
-                className="border-border/50"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-            )}
-            <Button
-              onClick={goNext}
-              className="bg-aqua text-deep-blue hover:bg-aqua-dim"
-            >
-              {selections[step.id] ? "Next" : "Skip"}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+        {/* Right: Cart sidebar (desktop only) */}
+        <div className="hidden w-80 shrink-0 lg:block">
+          <div className="sticky top-24 rounded-lg border border-border/50 bg-card/50">
+            <WizardCartSidebar
+              items={cartItems}
+              fishSelections={fishSelections}
+              recommendations={recommendations}
+              stepGuides={sidebarGuides}
+              onRemoveItem={removeSelection}
+              onSelectStep={goToStep}
+            />
           </div>
         </div>
-      )}
-    </div>
+      </div>
+
+      {/* Mobile: Sticky bottom cart bar */}
+      <WizardMobileCart
+        items={cartItems}
+        fishSelections={fishSelections}
+        recommendations={recommendations}
+        stepGuides={sidebarGuides}
+        onRemoveItem={removeSelection}
+        onSelectStep={goToStep}
+      />
+    </>
   );
 }
