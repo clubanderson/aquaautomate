@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { ArrowRight, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   matchProductToSpecies,
@@ -27,6 +29,19 @@ const COMPAT_LABELS: Record<Compatibility, string> = {
   incompatible: "Incompatible",
 };
 
+/** Number of recommended tank-mate product cards to display */
+const RECOMMENDED_TANK_MATES_COUNT = 4;
+
+/** Build a href for a product — internal page or external Amazon link */
+function productHref(p: NormalizedProduct): string {
+  return p.source === "amazon" ? (p.externalUrl ?? "#") : `/products/${p.handle}`;
+}
+
+/** Build a search link to find a species in the store */
+function speciesSearchHref(speciesName: string): string {
+  return `/collections?q=${encodeURIComponent(speciesName.toLowerCase())}`;
+}
+
 /** Tank-mate compatibility section — shows on ALL product pages */
 export function TankMates({ product, allProducts }: TankMatesProps) {
   const species = matchProductToSpecies(product);
@@ -39,6 +54,20 @@ export function TankMates({ product, allProducts }: TankMatesProps) {
       allProducts,
       product.id
     );
+
+    /* Build a lookup: species name → best store product match */
+    const speciesProductMap = new Map<string, NormalizedProduct>();
+    for (const { product: p } of storeMatches) {
+      const matched = matchProductToSpecies(p);
+      if (matched && !speciesProductMap.has(matched.species)) {
+        speciesProductMap.set(matched.species, p);
+      }
+    }
+
+    /* Top 4 compatible products with images for the recommendation cards */
+    const recommendedProducts = storeMatches
+      .filter((m) => m.compatibility === "compatible")
+      .slice(0, RECOMMENDED_TANK_MATES_COUNT);
 
     return (
       <section className="mt-16">
@@ -71,58 +100,104 @@ export function TankMates({ product, allProducts }: TankMatesProps) {
           </div>
         </div>
 
-        {/* Compatibility list */}
-        <div className="space-y-2">
-          {mates.map(({ profile, compatibility, note }) => (
-            <div
-              key={profile.species}
-              className="flex items-start gap-3 rounded-lg border border-border/50 bg-card/50 p-3"
-            >
-              <Badge className={COMPAT_COLORS[compatibility]}>
-                {COMPAT_LABELS[compatibility]}
-              </Badge>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{profile.species}</p>
-                <p className="text-xs text-muted-foreground">{note}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Available in store */}
-        {storeMatches.length > 0 && (
-          <div className="mt-6">
+        {/* Recommended tank-mate product cards */}
+        {recommendedProducts.length > 0 && (
+          <div className="mb-8">
             <h3 className="mb-3 text-lg font-semibold">
-              Compatible Fish in Our Store
+              Shop Compatible Tank-Mates
             </h3>
-            <div className="flex flex-wrap gap-2">
-              {storeMatches
-                .filter((m) => m.compatibility !== "incompatible")
-                .map(({ product: p, compatibility }) => (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {recommendedProducts.map(({ product: p, compatibility }) => {
+                const href = productHref(p);
+                const isExternal = p.source === "amazon";
+
+                return (
                   <Link
                     key={p.id}
-                    href={
-                      p.source === "amazon"
-                        ? p.externalUrl ?? "#"
-                        : `/products/${p.handle}`
-                    }
-                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors hover:border-aqua/50 ${
-                      compatibility === "caution"
-                        ? "border-amber-600/30"
-                        : "border-border/50"
-                    }`}
+                    href={href}
+                    {...(isExternal
+                      ? { target: "_blank", rel: "noopener noreferrer" }
+                      : {})}
+                    className="group rounded-lg border border-border/50 bg-card/50 transition-all hover:border-aqua/30 hover:shadow-lg hover:shadow-aqua/5"
                   >
-                    {p.title}
-                    <Badge
-                      className={`text-[10px] ${COMPAT_COLORS[compatibility]}`}
-                    >
-                      {COMPAT_LABELS[compatibility]}
-                    </Badge>
+                    {/* Product image */}
+                    <div className="relative aspect-square overflow-hidden rounded-t-lg bg-muted">
+                      {p.featuredImage ? (
+                        <Image
+                          src={p.featuredImage.url}
+                          alt={p.featuredImage.altText ?? p.title}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 640px) 50vw, 25vw"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-muted-foreground">
+                          No image
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Product info */}
+                    <div className="p-3">
+                      <p className="line-clamp-2 text-sm font-medium group-hover:text-aqua">
+                        {p.title}
+                      </p>
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-sm font-medium text-aqua">
+                          ${p.price.amount}
+                        </span>
+                        <Badge
+                          className={`text-[10px] ${COMPAT_COLORS[compatibility]}`}
+                        >
+                          {COMPAT_LABELS[compatibility]}
+                        </Badge>
+                      </div>
+                      {isExternal && (
+                        <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <ExternalLink className="h-2.5 w-2.5" />
+                          Amazon
+                        </div>
+                      )}
+                    </div>
                   </Link>
-                ))}
+                );
+              })}
             </div>
           </div>
         )}
+
+        {/* Compatibility list — each row links to the product or a search */}
+        <h3 className="mb-3 text-lg font-semibold">All Species Compatibility</h3>
+        <div className="space-y-2">
+          {mates.map(({ profile, compatibility, note }) => {
+            const storeProduct = speciesProductMap.get(profile.species);
+            const href = storeProduct
+              ? productHref(storeProduct)
+              : speciesSearchHref(profile.species);
+            const isExternal =
+              storeProduct?.source === "amazon";
+
+            return (
+              <Link
+                key={profile.species}
+                href={href}
+                {...(isExternal
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
+                className="flex items-start gap-3 rounded-lg border border-border/50 bg-card/50 p-3 transition-colors hover:border-aqua/30 hover:bg-card/80"
+              >
+                <Badge className={COMPAT_COLORS[compatibility]}>
+                  {COMPAT_LABELS[compatibility]}
+                </Badge>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{profile.species}</p>
+                  <p className="text-xs text-muted-foreground">{note}</p>
+                </div>
+                <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              </Link>
+            );
+          })}
+        </div>
       </section>
     );
   }
@@ -161,12 +236,13 @@ export function TankMates({ product, allProducts }: TankMatesProps) {
               }
 
               return (
-                <span
+                <Link
                   key={sp}
-                  className="rounded-md border border-border/50 px-2 py-1 text-xs text-muted-foreground"
+                  href={speciesSearchHref(sp)}
+                  className="rounded-md border border-border/50 px-2 py-1 text-xs text-muted-foreground hover:border-aqua/30 hover:text-aqua"
                 >
                   {sp}
-                </span>
+                </Link>
               );
             })}
           </div>
