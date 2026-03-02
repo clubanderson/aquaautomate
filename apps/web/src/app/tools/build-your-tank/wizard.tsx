@@ -311,6 +311,98 @@ function matchFishFromParam(
   return matched;
 }
 
+/* ── Session persistence ────────────────────────────────────────────── */
+
+/** sessionStorage key for wizard state */
+const SESSION_KEY = "aqua-wizard-state";
+
+/** Serializable snapshot of wizard state (product IDs only, not full objects) */
+interface WizardSnapshot {
+  /** Product IDs keyed by step (fish is array, others are string | null) */
+  selections: {
+    fish: string[];
+    tank: string | null;
+    plants: string | null;
+    hardscape: string | null;
+    filter: string | null;
+    heater: string | null;
+    light: string | null;
+    substrate: string | null;
+  };
+  fishQuantities: Record<string, number>;
+  currentStep: number;
+}
+
+/** Save wizard state to sessionStorage */
+function saveWizardState(
+  selections: WizardSelections,
+  fishQuantities: Record<string, number>,
+  currentStep: number,
+): void {
+  try {
+    const snapshot: WizardSnapshot = {
+      selections: {
+        fish: selections.fish.map((p) => p.id),
+        tank: selections.tank?.id ?? null,
+        plants: selections.plants?.id ?? null,
+        hardscape: selections.hardscape?.id ?? null,
+        filter: selections.filter?.id ?? null,
+        heater: selections.heater?.id ?? null,
+        light: selections.light?.id ?? null,
+        substrate: selections.substrate?.id ?? null,
+      },
+      fishQuantities,
+      currentStep,
+    };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(snapshot));
+  } catch {
+    /* sessionStorage unavailable (SSR, private browsing) — silently skip */
+  }
+}
+
+/** Restore wizard state from sessionStorage, rehydrating product IDs against the catalog */
+function restoreWizardState(
+  products: NormalizedProduct[],
+): { selections: WizardSelections; fishQuantities: Record<string, number>; currentStep: number } | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+
+    const snapshot: WizardSnapshot = JSON.parse(raw);
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    const fish = (snapshot.selections.fish || [])
+      .map((id) => productMap.get(id))
+      .filter((p): p is NormalizedProduct => p != null);
+
+    const selections: WizardSelections = {
+      fish,
+      tank: snapshot.selections.tank ? productMap.get(snapshot.selections.tank) ?? null : null,
+      plants: snapshot.selections.plants ? productMap.get(snapshot.selections.plants) ?? null : null,
+      hardscape: snapshot.selections.hardscape ? productMap.get(snapshot.selections.hardscape) ?? null : null,
+      filter: snapshot.selections.filter ? productMap.get(snapshot.selections.filter) ?? null : null,
+      heater: snapshot.selections.heater ? productMap.get(snapshot.selections.heater) ?? null : null,
+      light: snapshot.selections.light ? productMap.get(snapshot.selections.light) ?? null : null,
+      substrate: snapshot.selections.substrate ? productMap.get(snapshot.selections.substrate) ?? null : null,
+      review: null,
+    };
+
+    /* Only restore if there's actually something saved */
+    const hasAnySelection = fish.length > 0 || Object.values(snapshot.selections).some((v) =>
+      v !== null && !Array.isArray(v),
+    );
+    if (!hasAnySelection) return null;
+
+    return {
+      selections,
+      fishQuantities: snapshot.fishQuantities || {},
+      currentStep: snapshot.currentStep ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /* ── Component props ─────────────────────────────────────────────────── */
 
 interface TankWizardProps {
@@ -341,26 +433,43 @@ export function TankWizard({ products }: TankWizardProps) {
 
   const hasPreselectedFish = preselectedFishMatches.length > 0;
 
-  /** Compute initial selections and step — only once via lazy initializer */
-  const buildInitialSelections = useCallback((): WizardSelections => ({
-    ...INITIAL_SELECTIONS,
-    fish: preselectedFishProducts,
-  }), [preselectedFishProducts]);
+  /**
+   * Initialize wizard state: URL params take priority (coming from calculator),
+   * then sessionStorage (returning after navigating away), then empty.
+   */
+  const [currentStep, setCurrentStep] = useState(() => {
+    if (hasPreselectedFish) return TANK_STEP_INDEX;
+    const restored = restoreWizardState(products);
+    return restored?.currentStep ?? 0;
+  });
 
-  const [currentStep, setCurrentStep] = useState(
-    () => hasPreselectedFish ? TANK_STEP_INDEX : 0,
-  );
-  const [selections, setSelections] = useState<WizardSelections>(buildInitialSelections);
+  const [selections, setSelections] = useState<WizardSelections>(() => {
+    if (hasPreselectedFish) {
+      return { ...INITIAL_SELECTIONS, fish: preselectedFishProducts };
+    }
+    const restored = restoreWizardState(products);
+    return restored?.selections ?? INITIAL_SELECTIONS;
+  });
+
   const [activeFishType, setActiveFishType] = useState<string | null>(null);
 
   /** Per-fish quantities (keyed by product ID) */
   const [fishQuantities, setFishQuantities] = useState<Record<string, number>>(() => {
-    const map: Record<string, number> = {};
-    for (const match of preselectedFishMatches) {
-      map[match.product.id] = match.quantity;
+    if (hasPreselectedFish) {
+      const map: Record<string, number> = {};
+      for (const match of preselectedFishMatches) {
+        map[match.product.id] = match.quantity;
+      }
+      return map;
     }
-    return map;
+    const restored = restoreWizardState(products);
+    return restored?.fishQuantities ?? {};
   });
+
+  /** Persist wizard state to sessionStorage on every change */
+  useEffect(() => {
+    saveWizardState(selections, fishQuantities, currentStep);
+  }, [selections, fishQuantities, currentStep]);
 
   /** Update quantity for a specific fish product */
   const setFishQuantity = (productId: string, quantity: number) => {
@@ -660,6 +769,8 @@ export function TankWizard({ products }: TankWizardProps) {
                       <Link
                         key={guide.slug}
                         href={`/guides/${guide.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="group flex items-start gap-2 rounded-md border border-border/30 bg-card/50 p-2.5 transition-colors hover:border-aqua/30 hover:bg-aqua/5"
                       >
                         <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-aqua" />
@@ -727,7 +838,7 @@ export function TankWizard({ products }: TankWizardProps) {
                   className="bg-aqua text-deep-blue hover:bg-aqua-dim"
                   asChild
                 >
-                  <Link href="/tools/tank-calculator">
+                  <Link href="/tools/tank-calculator" target="_blank" rel="noopener noreferrer">
                     Check compatibility with the Tank Calculator
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
