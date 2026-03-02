@@ -37,6 +37,9 @@ export const AMAZON_PRICE_CACHE_TTL_MS = 3_600_000;
 /** ISR revalidation interval in seconds (5 minutes) */
 export const REVALIDATE_SECONDS = 300;
 
+/** Number of product recommendations to show in the wizard cart sidebar */
+export const WIZARD_RECOMMENDATION_COUNT = 3;
+
 /** Navigation links */
 export const NAV_LINKS = [
   { label: "Shop", href: "/collections" },
