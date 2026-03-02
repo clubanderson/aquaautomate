@@ -14,7 +14,6 @@ import {
 import {
   WizardCartSidebar,
   type WizardCartItem,
-  type WizardFishSelection,
 } from "./wizard-cart-sidebar";
 import type { NormalizedProduct } from "@/lib/commerce/types";
 
@@ -26,10 +25,9 @@ interface StepGuide {
 
 interface WizardMobileCartProps {
   items: WizardCartItem[];
-  fishSelections: WizardFishSelection[];
   recommendations: NormalizedProduct[];
   stepGuides: StepGuide[];
-  onRemoveItem: (stepId: string) => void;
+  onRemoveItem: (stepId: string, productId?: string) => void;
   onSelectStep: (stepId: string) => void;
 }
 
@@ -40,7 +38,6 @@ interface WizardMobileCartProps {
  */
 export function WizardMobileCart({
   items,
-  fishSelections,
   recommendations,
   stepGuides,
   onRemoveItem,
@@ -90,7 +87,6 @@ export function WizardMobileCart({
           <div className="flex-1 overflow-y-auto">
             <WizardCartSidebar
               items={items}
-              fishSelections={fishSelections}
               recommendations={recommendations}
               stepGuides={stepGuides}
               onRemoveItem={onRemoveItem}
