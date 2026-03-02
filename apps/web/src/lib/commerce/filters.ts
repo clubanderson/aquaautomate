@@ -79,10 +79,14 @@ export function applyFilters(
     });
   }
 
-  /* Water type filter */
+  /* Water type filter — "both" products match any water type selection */
   if (filters.waterTypes.length > 0) {
     const types = new Set(filters.waterTypes);
-    result = result.filter((p) => p.waterType && types.has(p.waterType));
+    result = result.filter((p) => {
+      if (!p.waterType) return false;
+      if (p.waterType === "both") return true;
+      return types.has(p.waterType);
+    });
   }
 
   /* Price range */
