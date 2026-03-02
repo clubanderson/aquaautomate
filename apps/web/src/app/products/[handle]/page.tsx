@@ -18,6 +18,9 @@ import type { NormalizedProduct } from "@/lib/commerce/types";
 import { AddToCartButton } from "./add-to-cart-button";
 import { ProductRecommendations } from "@/components/product-recommendations";
 import { TankMates } from "@/components/tank-mates";
+import { ProductReviews } from "@/components/product-reviews";
+import { PriceAlertButton } from "@/components/price-alert-button";
+import { WishlistButton } from "@/components/wishlist-button";
 
 /** Fallback gradient for product images */
 const PLACEHOLDER_GRADIENT =
@@ -194,8 +197,19 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
           )}
 
-          {/* Add to Cart */}
-          <AddToCartButton product={product} />
+          {/* Add to Cart + Wishlist */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <AddToCartButton product={product} />
+            </div>
+            <WishlistButton productId={product.id} className="border border-border/50 rounded-lg p-2.5" />
+          </div>
+
+          {/* Price Alert */}
+          <PriceAlertButton
+            productId={product.id}
+            currentPrice={product.price.amount}
+          />
 
           {/* Tags */}
           {product.tags.length > 0 && (
@@ -216,6 +230,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
       {/* Tank-Mate Compatibility */}
       <TankMates product={product} allProducts={allProducts} />
+
+      {/* Customer Reviews */}
+      <div className="mt-12">
+        <ProductReviews productId={product.id} />
+      </div>
 
       {/* Product Recommendations */}
       <ProductRecommendations product={product} allProducts={allProducts} />

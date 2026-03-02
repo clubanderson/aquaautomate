@@ -24,6 +24,16 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   metadataBase: new URL("https://aquaautomate.com"),
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: SITE_NAME,
+  },
+};
+
+export const viewport = {
+  themeColor: "#00D4AA",
 };
 
 export default function RootLayout({

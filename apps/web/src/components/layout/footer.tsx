@@ -5,26 +5,20 @@ import { SITE_NAME } from "@/lib/constants";
 const FOOTER_LINKS = {
   Shop: [
     { label: "All Products", href: "/collections" },
-    { label: "Freshwater Fish", href: "/collections/freshwater-fish" },
-    { label: "Live Plants", href: "/collections/live-plants" },
-    { label: "Automation Gear", href: "/collections/automation-gear" },
-    { label: "Hardscape", href: "/collections/hardscape" },
+    { label: "Compare Products", href: "/tools/compare" },
+    { label: "Build Your Tank", href: "/tools/build-your-tank" },
+    { label: "My Wishlist", href: "/wishlist" },
   ],
-  Automation: [
-    { label: "Overview", href: "/automation" },
-    { label: "Getting Started", href: "/guides/ha-getting-started" },
-    { label: "All Guides", href: "/guides?category=automation" },
+  Learn: [
+    { label: "Species Care Sheets", href: "/species" },
+    { label: "Blog", href: "/blog" },
+    { label: "Guides", href: "/guides" },
+    { label: "Tank Calculator", href: "/tools/tank-calculator" },
   ],
-  Guides: [
-    { label: "Automation Blueprints", href: "/guides?category=automation" },
-    { label: "Species Care", href: "/guides?category=species" },
-    { label: "Getting Started", href: "/guides/getting-started" },
-  ],
-  About: [
-    { label: "Our Story", href: "/about" },
-    { label: "Contact", href: "/contact" },
-    { label: "Shipping", href: "/shipping" },
-    { label: "Returns", href: "/returns" },
+  Explore: [
+    { label: "Automation", href: "/automation" },
+    { label: "Live Aquarium Cams", href: "/live" },
+    { label: "Tank Gallery", href: "/gallery" },
   ],
 };
 
