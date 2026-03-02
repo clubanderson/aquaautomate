@@ -8,6 +8,8 @@ import {
   findTankMateProducts,
   getNonFishCompatibilityNote,
 } from "@/lib/aquarium/match-species";
+import { SPECIES_PROFILES } from "@/lib/aquarium/compatibility-data";
+import { SPECIES_CARE } from "@/lib/aquarium/species-care";
 import type { NormalizedProduct } from "@/lib/commerce/types";
 import type { Compatibility } from "@/lib/aquarium/tank-mates";
 
@@ -27,6 +29,13 @@ const COMPAT_LABELS: Record<Compatibility, string> = {
   compatible: "Compatible",
   caution: "Caution",
   incompatible: "Incompatible",
+};
+
+const SWIM_LABELS: Record<string, string> = {
+  top: "Top",
+  mid: "Mid",
+  bottom: "Bottom",
+  all: "All",
 };
 
 /** Number of recommended tank-mate product cards to display */
@@ -177,24 +186,105 @@ export function TankMates({ product, allProducts }: TankMatesProps) {
             const isExternal =
               storeProduct?.source === "amazon";
 
+            /* Look up hover preview data */
+            const targetProfile = SPECIES_PROFILES.find(
+              (p) => p.species === profile.species
+            );
+            const care = SPECIES_CARE[profile.species];
+
             return (
-              <Link
-                key={profile.species}
-                href={href}
-                {...(isExternal
-                  ? { target: "_blank", rel: "noopener noreferrer" }
-                  : {})}
-                className="flex items-start gap-3 rounded-lg border border-border/50 bg-card/50 p-3 transition-colors hover:border-aqua/30 hover:bg-card/80"
-              >
-                <Badge className={COMPAT_COLORS[compatibility]}>
-                  {COMPAT_LABELS[compatibility]}
-                </Badge>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{profile.species}</p>
-                  <p className="text-xs text-muted-foreground">{note}</p>
-                </div>
-                <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-              </Link>
+              <div key={profile.species} className="group/row relative">
+                <Link
+                  href={href}
+                  {...(isExternal
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
+                  className="flex items-start gap-3 rounded-lg border border-border/50 bg-card/50 p-3 transition-colors hover:border-aqua/30 hover:bg-card/80"
+                >
+                  <Badge className={COMPAT_COLORS[compatibility]}>
+                    {COMPAT_LABELS[compatibility]}
+                  </Badge>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{profile.species}</p>
+                    <p className="text-xs text-muted-foreground">{note}</p>
+                  </div>
+                  <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                </Link>
+
+                {/* Hover preview card — hidden on mobile, shown on desktop hover */}
+                {targetProfile && (
+                  <div className="pointer-events-none absolute -top-2 left-full z-50 ml-3 hidden w-64 -translate-y-1/2 opacity-0 transition-opacity group-hover/row:opacity-100 lg:block">
+                    <div className="rounded-lg border border-border bg-card p-3 shadow-xl shadow-black/30">
+                      <p className="text-sm font-semibold">{profile.species}</p>
+                      <p className="text-[10px] italic text-muted-foreground">
+                        {targetProfile.scientificName}
+                      </p>
+                      <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px]">
+                        <div>
+                          <span className="text-muted-foreground">Temp: </span>
+                          <span className="font-medium">
+                            {targetProfile.waterParams.tempMinF}&ndash;
+                            {targetProfile.waterParams.tempMaxF}&deg;F
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">pH: </span>
+                          <span className="font-medium">
+                            {targetProfile.waterParams.phMin}&ndash;
+                            {targetProfile.waterParams.phMax}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Tank: </span>
+                          <span className="font-medium">
+                            {targetProfile.minTankGallons}+ gal
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Swim: </span>
+                          <span className="font-medium">
+                            {SWIM_LABELS[targetProfile.swimLevel]}
+                          </span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">Nature: </span>
+                          <span className="font-medium capitalize">
+                            {targetProfile.temperament}
+                          </span>
+                        </div>
+                        {care && (
+                          <>
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">
+                                Size:{" "}
+                              </span>
+                              <span className="font-medium">
+                                {care.adultSize}
+                              </span>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">
+                                Lifespan:{" "}
+                              </span>
+                              <span className="font-medium">
+                                {care.lifespan}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {care && (
+                        <Link
+                          href={`/species/${care.slug}`}
+                          className="pointer-events-auto mt-2 block text-[10px] text-aqua hover:underline"
+                        >
+                          View full care sheet &rarr;
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>

@@ -40,11 +40,11 @@ export const REVALIDATE_SECONDS = 300;
 /** Navigation links */
 export const NAV_LINKS = [
   { label: "Shop", href: "/collections" },
-  { label: "Plants", href: "/collections?cat=LIVE+PLANTS,PLANTS,PLANT,GARDEN+PLANTS,AQUATIC+PLANTS" },
-  { label: "Driftwood", href: "/collections?cat=DRIFTWOOD" },
-  { label: "Equipment", href: "/collections?cat=FILTER,HEATER,AIR+PUMP,UV+LIGHT,TANK,STAND" },
+  { label: "Species", href: "/species" },
+  { label: "Tools", href: "/tools/tank-calculator" },
   { label: "Automation", href: "/automation" },
-  { label: "Guides", href: "/guides" },
+  { label: "Blog", href: "/blog" },
+  { label: "Live Cams", href: "/live" },
 ] as const;
 
 /** Product categories */

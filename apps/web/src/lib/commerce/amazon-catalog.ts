@@ -784,6 +784,91 @@ const STANDS: NormalizedProduct[] = [
 ];
 
 /* ------------------------------------------------------------------ */
+/*  CAMERAS                                                            */
+/* ------------------------------------------------------------------ */
+
+const CAMERAS: NormalizedProduct[] = [
+  createAmazonProduct({
+    asin: "B0F9S67XH7",
+    title: "Amouu 2K HD Aquarium WiFi Pet Camera — Anti-Glare Glass Mount",
+    description:
+      "2K HD aquarium camera with 140° wide-angle anti-glare lens, night vision, two-way audio, and AI-powered motion detection. Peel-and-stick glass mount installation. 24/7 cloud or SD card recording.",
+    price: "36.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61qJYLKbURL._AC_SL1500_.jpg",
+    vendor: "Amouu",
+    productType: "CAMERA",
+    tags: ["camera", "wifi", "aquarium", "monitoring", "smart-home", "equipment"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B0FP4L1KR3",
+    title: "HomiQ 3MP Aquarium AI Monitoring Camera — Magnetic Install",
+    description:
+      "3MP terrarium and aquarium camera with close-up detail lens, dual-band WiFi (2.4G/5GHz), starlight color night vision, and AI motion detection. Easy magnetic install. Anti-glare, anti-reflection design.",
+    price: "49.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61nXnXkFURL._AC_SL1500_.jpg",
+    vendor: "HomiQ",
+    productType: "CAMERA",
+    tags: ["camera", "wifi", "aquarium", "ai", "monitoring", "smart-home", "equipment"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B08V8B9P51",
+    title: "Barlus 5MP Underwater Aquarium Camera — 32ft POE Cable",
+    description:
+      "Fully submersible 5MP POE IP camera in 304 stainless steel housing. Live streaming capability, no built-in lights (fish-safe), 32-foot cable. Perfect for ponds and large aquariums.",
+    price: "219.99",
+    imageUrl: "https://m.media-amazon.com/images/I/51MeCVsWvLL._AC_SL1500_.jpg",
+    vendor: "Barlus",
+    productType: "CAMERA",
+    tags: ["camera", "underwater", "poe", "aquarium", "pond", "submersible", "equipment"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B0BW5YFBKH",
+    title: "Barlus HD 5MP Underwater POE Camera — Fill Light, 98ft Cable",
+    description:
+      "Premium submersible 5MP POE IP camera with 316L marine-grade stainless steel, built-in fill light, 2.8mm wide-angle lens, and 98-foot cable. IP68 waterproof for aquaculture and aquarium use.",
+    price: "349.99",
+    imageUrl: "https://m.media-amazon.com/images/I/41vf7fd52wL._AC_SL1500_.jpg",
+    vendor: "Barlus",
+    productType: "CAMERA",
+    tags: ["camera", "underwater", "poe", "aquarium", "marine", "submersible", "equipment"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B098F3VXHY",
+    title: "LINOVISION 4K Ultra HD Underwater POE Camera — 33ft Cable",
+    description:
+      "Professional 4K (8MP) underwater POE camera with anti-corrosion coating, 112.7° wide-angle lens, LED illumination, and mobile app. For aquariums, ponds, and aquaculture farms.",
+    price: "439.00",
+    imageUrl: "https://m.media-amazon.com/images/I/31M2wOhmiRL._AC_SL1500_.jpg",
+    vendor: "LINOVISION",
+    productType: "CAMERA",
+    tags: ["camera", "underwater", "4k", "poe", "aquarium", "professional", "equipment"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+  createAmazonProduct({
+    asin: "B0F9KPMSML",
+    title: "Pawfly WiFi Auto Fish Feeder with 2.5K HD Camera",
+    description:
+      "Smart automatic fish feeder with built-in 2.5K HD camera, infrared night vision, and WiFi app control. 230mL capacity, timer scheduling, USB powered. Monitor and feed remotely.",
+    price: "39.99",
+    imageUrl: "https://m.media-amazon.com/images/I/61YkLKbURL._AC_SL1500_.jpg",
+    vendor: "Pawfly",
+    productType: "AUTO FEEDER",
+    tags: ["camera", "auto-feeder", "wifi", "smart-home", "aquarium", "monitoring", "equipment"],
+    waterType: "both",
+    automationCompatible: true,
+  }),
+];
+
+/* ------------------------------------------------------------------ */
 /*  COMBINED EXPORT                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -807,4 +892,5 @@ export const AMAZON_PRODUCTS: NormalizedProduct[] = [
   ...AUTO_FEEDERS,
   ...TANKS,
   ...STANDS,
+  ...CAMERAS,
 ];

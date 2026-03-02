@@ -1,0 +1,114 @@
+---
+title: "Why Every Aquarium Needs Smart Plugs"
+slug: smart-plugs-aquarium
+description: "Smart plugs are the cheapest, easiest upgrade you can make to your aquarium. Here's how they save time, money, and fish lives."
+category: equipment
+author: AquaAutomate
+date: "2025-02-20"
+tags: [automation, smart home, equipment, home assistant]
+---
+
+## The Case for Smart Plugs
+
+Most aquarium equipment — lights, heaters, air pumps, dosing pumps — runs on simple timers. A $12 smart plug replaces mechanical timers with app control, scheduling, energy monitoring, and automation triggers.
+
+**The killer feature:** power failure alerts. If your heater or filter loses power at 2 AM, a smart plug can send a push notification to your phone. Without it, you might not notice until morning — and by then, your fish could be in trouble.
+
+## What to Automate
+
+### Lighting (Priority: High)
+
+Your tank lights should run on a consistent schedule. Fish and plants need a regular photoperiod — typically 8-10 hours of light per day. Smart plugs let you:
+
+- Set exact on/off times
+- Create sunrise/sunset ramping (with dimmable lights)
+- Adjust schedules seasonally
+- Enable "movie mode" — dim or kill tank lights while watching TV
+
+### Air Pumps (Priority: Medium)
+
+Some fishkeepers run air pumps on schedules — on at night when plants aren't producing oxygen, off during the day. A smart plug makes this effortless.
+
+### Dosing Pumps (Priority: High)
+
+Fertilizer dosing for planted tanks or supplement dosing for reef tanks should happen on a strict schedule. A smart plug powering a dosing pump gives you precise control.
+
+### Heaters (Priority: High for Monitoring)
+
+You probably want your heater running 24/7 (the built-in thermostat handles cycling). But a smart plug with energy monitoring lets you:
+
+- Detect heater failure (power draw drops to zero)
+- Detect stuck-on heaters (power draw never cycles off)
+- Monitor energy costs
+
+## Recommended Smart Plugs
+
+### For Most Equipment: Tuya WiFi Smart Plugs
+
+- Cheap ($5-8 each)
+- Works with Home Assistant, Alexa, Google Home
+- Individual outlet control on power strips
+- Energy monitoring on some models
+
+### For High-Draw Equipment: Shelly Plus Plug S
+
+- Handles up to 12A (heaters, canister filters)
+- Built-in energy monitoring
+- Local API (no cloud dependency)
+- Compact design doesn't block adjacent outlets
+
+### For Hardwired Equipment: Shelly Plus 1PM Mini
+
+- Wires inline behind an outlet or in a junction box
+- Perfect for hardwired pumps or permanent installations
+- Power monitoring included
+
+## Setting Up with Home Assistant
+
+Once your plugs are connected to Home Assistant, you can create powerful automations:
+
+```yaml
+automation:
+  - alias: "Tank lights on at sunrise"
+    trigger:
+      - platform: sun
+        event: sunrise
+        offset: "+01:00:00"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tank_light
+```
+
+```yaml
+automation:
+  - alias: "Alert on heater failure"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.heater_plug_power
+        below: 1
+        for:
+          minutes: 30
+    condition:
+      - condition: numeric_state
+        entity_id: sensor.tank_temperature
+        below: 76
+    action:
+      - service: notify.mobile_app
+        data:
+          title: "Heater Alert"
+          message: "Tank heater appears to have failed. Current temp: {{ states('sensor.tank_temperature') }}°F"
+```
+
+## The Bottom Line
+
+| Upgrade | Cost | Time to Set Up | Impact |
+| --- | --- | --- | --- |
+| Smart plug for lights | $8 | 10 min | High — consistent photoperiod |
+| Smart plug for heater | $12 | 10 min | Critical — failure alerts |
+| Smart power strip | $25 | 20 min | High — control everything |
+| Home Assistant | Free | 1-2 hours | Game-changing |
+
+For under $50, you can automate your entire tank and get alerts that could save your fish. It's the best ROI upgrade in the hobby.
+
+Check out our [Automation Guide](/automation) for the full setup walkthrough.
