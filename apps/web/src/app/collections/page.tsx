@@ -67,6 +67,13 @@ const PRODUCT_TYPE_LABELS: Record<string, string> = {
   SHIPPING: "Shipping",
 };
 
+/** Merge synonymous product types into a single canonical key */
+const PRODUCT_TYPE_ALIASES: Record<string, string> = {
+  PLANT: "PLANTS",
+  "LIVE PLANT": "LIVE PLANTS",
+  "LIVE PLANTS": "PLANTS",
+};
+
 /** Minimum products in a type to show as its own section */
 const MIN_PRODUCTS_PER_GROUP = 2;
 
@@ -78,9 +85,9 @@ function groupProductsByType(products: NormalizedProduct[]): NormalizedCollectio
   const groups = new Map<string, NormalizedProduct[]>();
 
   for (const product of products) {
-    /* Normalize to uppercase so mixed-case types (e.g. "Plant" from H2O
-       Plants) merge with uppercase types (e.g. "PLANTS" from Danaqua) */
-    const type = (product.productType || "MISCELLANEOUS").toUpperCase();
+    /* Normalize to uppercase then merge synonyms (e.g. "Plant" → "PLANTS") */
+    const raw = (product.productType || "MISCELLANEOUS").toUpperCase();
+    const type = PRODUCT_TYPE_ALIASES[raw] || raw;
     const existing = groups.get(type) || [];
     existing.push(product);
     groups.set(type, existing);
