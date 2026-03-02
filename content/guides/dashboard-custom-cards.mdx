@@ -1,0 +1,610 @@
+---
+title: "Advanced Dashboard with HACS Custom Cards"
+slug: "dashboard-custom-cards"
+description: "Level up your aquarium dashboard with Mushroom cards, mini-graph-card, bubble-card, and custom themes — a polished, modern UI that looks nothing like stock Home Assistant."
+category: "automation"
+difficulty: "advanced"
+author: "AquaAutomate"
+date: "2026-03-02"
+tags: ["dashboard", "lovelace", "hacs", "mushroom", "mini-graph", "bubble", "custom-cards", "theme", "home-assistant"]
+image: "/images/guides/custom-cards-dashboard.jpg"
+---
+
+# Advanced Dashboard with HACS Custom Cards
+
+Stock Home Assistant cards get the job done but they look like... stock Home Assistant. With HACS custom cards you can build a dashboard that's genuinely beautiful — smooth mini-graphs, clean mushroom chip controls, animated backgrounds, and a cohesive aquarium theme. This guide builds a premium dashboard from scratch.
+
+## What You'll Need
+
+- **Home Assistant** with aquarium devices configured
+- **HACS** (Home Assistant Community Store) — [install guide](https://hacs.xyz/docs/setup/download)
+- About 60 minutes for setup and customization
+
+## Step 1: Install HACS Custom Cards
+
+Open HACS in HA, go to **Frontend**, and install these:
+
+| Card | What It Does | Install Name |
+|---|---|---|
+| **Mushroom** | Modern, clean entity cards with chips | `mushroom` |
+| **mini-graph-card** | Beautiful inline sparkline and full graphs | `mini-graph-card` |
+| **bubble-card** | Floating navigation bar + pop-up cards | `bubble-card` |
+| **card-mod** | CSS styling on any card | `card-mod` |
+| **swipe-card** | Swipe between cards (great for tanks on mobile) | `swipe-card` |
+| **layout-card** | Custom grid layouts | `layout-card` |
+| **auto-entities** | Auto-populate cards based on entity patterns | `auto-entities` |
+| **apexcharts-card** | Advanced charts with multiple axes | `apexcharts-card` |
+
+After installing, restart Home Assistant.
+
+## Step 2: Aquarium Theme
+
+Create a dark aquarium theme that ties the whole dashboard together. Add to `configuration.yaml`:
+
+```yaml
+frontend:
+  themes:
+    aquarium:
+      # Background
+      primary-background-color: "#0a1628"
+      secondary-background-color: "#0d1f3c"
+      card-background-color: "rgba(13, 31, 60, 0.8)"
+      ha-card-background: "rgba(13, 31, 60, 0.8)"
+      ha-card-border-radius: "12px"
+      ha-card-border-width: "1px"
+      ha-card-border-color: "rgba(0, 212, 170, 0.15)"
+
+      # Accent colors
+      primary-color: "#00d4aa"
+      accent-color: "#00d4aa"
+      switch-checked-color: "#00d4aa"
+      switch-unchecked-button-color: "#4a5568"
+
+      # Text
+      primary-text-color: "#e2e8f0"
+      secondary-text-color: "#94a3b8"
+      disabled-text-color: "#475569"
+
+      # States
+      state-icon-active-color: "#00d4aa"
+      state-icon-color: "#64748b"
+
+      # Gauge
+      gauge-color-green: "#10b981"
+      gauge-color-yellow: "#f59e0b"
+      gauge-color-red: "#ef4444"
+```
+
+Activate: **Settings → Devices & Services → Frontend → Set theme to "aquarium"**
+
+## Step 3: Mushroom Header Chips
+
+Replace the boring entity row with sleek mushroom chips at the top of your dashboard:
+
+```yaml
+type: custom:mushroom-chips-card
+alignment: center
+chips:
+  - type: template
+    icon: mdi:thermometer
+    icon_color: >
+      {% if states('sensor.inkbird_29g_temperature') | float > 82 %}
+        red
+      {% elif states('sensor.inkbird_29g_temperature') | float > 80 %}
+        amber
+      {% else %}
+        teal
+      {% endif %}
+    content: "{{ states('sensor.inkbird_29g_temperature') }}°F"
+    tap_action:
+      action: more-info
+      entity: sensor.inkbird_29g_temperature
+
+  - type: entity
+    entity: switch.tuya_29g_light
+    icon: mdi:lightbulb
+    icon_color: amber
+    tap_action:
+      action: toggle
+
+  - type: entity
+    entity: switch.shelly_29g_heater
+    icon: mdi:fire
+    icon_color: red
+    tap_action:
+      action: toggle
+
+  - type: entity
+    entity: switch.shelly_29g_filter
+    icon: mdi:water-pump
+    icon_color: blue
+    tap_action:
+      action: toggle
+
+  - type: entity
+    entity: switch.tuya_29g_air_pump
+    icon: mdi:air-filter
+    icon_color: cyan
+    tap_action:
+      action: toggle
+
+  - type: template
+    icon: mdi:flash
+    icon_color: yellow
+    content: "{{ states('sensor.all_tanks_total_power') }}W"
+
+  - type: conditional
+    conditions:
+      - entity: input_boolean.vacation_mode
+        state: "on"
+    chip:
+      type: entity
+      entity: input_boolean.vacation_mode
+      icon: mdi:airplane
+      icon_color: purple
+```
+
+## Step 4: Mini-Graph Temperature Cards
+
+Replace the stock gauge with a mini-graph sparkline — shows current temp with a smooth 24-hour trend line:
+
+```yaml
+type: custom:mini-graph-card
+entities:
+  - entity: sensor.inkbird_29g_temperature
+    name: "29G Community"
+    color: "#00d4aa"
+name: "Temperature"
+icon: mdi:thermometer
+hours_to_show: 24
+points_per_hour: 4
+line_width: 2
+font_size: 75
+animate: true
+show:
+  labels: true
+  points: false
+  legend: false
+  fill: true
+  average: true
+  extrema: true
+color_thresholds:
+  - value: 74
+    color: "#3b82f6"
+  - value: 76
+    color: "#10b981"
+  - value: 80
+    color: "#f59e0b"
+  - value: 83
+    color: "#ef4444"
+style: |
+  ha-card {
+    border: 1px solid rgba(0, 212, 170, 0.2);
+  }
+```
+
+### Multi-Tank Temperature Overlay
+
+All temperatures on one graph with distinct colors:
+
+```yaml
+type: custom:mini-graph-card
+entities:
+  - entity: sensor.inkbird_29g_temperature
+    name: "29G"
+    color: "#00d4aa"
+  - entity: sensor.inkbird_10g_temperature
+    name: "10G"
+    color: "#3b82f6"
+  - entity: sensor.inkbird_55g_temperature
+    name: "55G"
+    color: "#f59e0b"
+  - entity: sensor.inkbird_5g_temperature
+    name: "5G"
+    color: "#a78bfa"
+name: "All Tanks — Temperature"
+hours_to_show: 48
+points_per_hour: 2
+line_width: 2
+animate: true
+show:
+  labels: true
+  legend: true
+  fill: false
+  average: true
+```
+
+## Step 5: Mushroom Entity Cards for Devices
+
+Clean, modern device controls with color-coded icons:
+
+```yaml
+type: grid
+columns: 3
+square: false
+cards:
+  - type: custom:mushroom-entity-card
+    entity: switch.tuya_29g_light
+    name: "Tank Light"
+    icon: mdi:lightbulb
+    icon_color: amber
+    tap_action:
+      action: toggle
+    layout: vertical
+    fill_container: true
+
+  - type: custom:mushroom-entity-card
+    entity: switch.shelly_29g_heater
+    name: "Heater"
+    icon: mdi:fire
+    icon_color: red
+    tap_action:
+      action: toggle
+    layout: vertical
+    fill_container: true
+
+  - type: custom:mushroom-entity-card
+    entity: switch.shelly_29g_filter
+    name: "Filter"
+    icon: mdi:water-pump
+    icon_color: blue
+    tap_action:
+      action: toggle
+    layout: vertical
+    fill_container: true
+
+  - type: custom:mushroom-entity-card
+    entity: switch.tuya_29g_air_pump
+    name: "Air Pump"
+    icon: mdi:air-filter
+    icon_color: cyan
+    tap_action:
+      action: toggle
+    layout: vertical
+    fill_container: true
+
+  - type: custom:mushroom-entity-card
+    entity: switch.tuya_auto_feeder
+    name: "Auto Feeder"
+    icon: mdi:fish
+    icon_color: green
+    tap_action:
+      action: toggle
+    layout: vertical
+    fill_container: true
+
+  - type: custom:mushroom-entity-card
+    entity: switch.tuya_uv_sterilizer
+    name: "UV Sterilizer"
+    icon: mdi:lightbulb-fluorescent-tube
+    icon_color: purple
+    tap_action:
+      action: toggle
+    layout: vertical
+    fill_container: true
+```
+
+## Step 6: ApexCharts Energy Dashboard
+
+A dual-axis chart showing power consumption over time with stacked area for each device:
+
+```yaml
+type: custom:apexcharts-card
+header:
+  title: "Energy Consumption — 24h"
+  show: true
+graph_span: 24h
+span:
+  end: now
+yaxis:
+  - id: power
+    min: 0
+    apex_config:
+      title:
+        text: "Watts"
+series:
+  - entity: sensor.shelly_29g_heater_power
+    name: "29G Heater"
+    color: "#ef4444"
+    type: area
+    opacity: 0.3
+    stroke_width: 2
+    yaxis_id: power
+  - entity: sensor.shelly_29g_filter_power
+    name: "29G Filter"
+    color: "#3b82f6"
+    type: area
+    opacity: 0.3
+    stroke_width: 2
+    yaxis_id: power
+  - entity: sensor.shelly_55g_heater_power
+    name: "55G Heater"
+    color: "#f59e0b"
+    type: area
+    opacity: 0.3
+    stroke_width: 2
+    yaxis_id: power
+  - entity: sensor.shelly_55g_filter_power
+    name: "55G Filter"
+    color: "#00d4aa"
+    type: area
+    opacity: 0.3
+    stroke_width: 2
+    yaxis_id: power
+```
+
+## Step 7: Bubble Card Navigation
+
+Add a floating bottom navigation bar for switching between views:
+
+```yaml
+type: custom:bubble-card
+card_type: pop-up
+hash: "#tank-29g"
+name: "29G Community"
+icon: mdi:fishbowl
+```
+
+And the navigation bar:
+
+```yaml
+type: custom:bubble-card
+card_type: horizontal-buttons-stack
+buttons:
+  - name: "Overview"
+    icon: mdi:view-dashboard
+    tap_action:
+      action: navigate
+      navigation_path: "#overview"
+  - name: "29G"
+    icon: mdi:fishbowl
+    tap_action:
+      action: navigate
+      navigation_path: "#tank-29g"
+  - name: "10G"
+    icon: mdi:fishbowl
+    tap_action:
+      action: navigate
+      navigation_path: "#tank-10g"
+  - name: "55G"
+    icon: mdi:fishbowl
+    tap_action:
+      action: navigate
+      navigation_path: "#tank-55g"
+  - name: "Energy"
+    icon: mdi:flash
+    tap_action:
+      action: navigate
+      navigation_path: "#energy"
+```
+
+## Step 8: Swipe Card for Mobile
+
+On mobile, swipe between tank views instead of scrolling:
+
+```yaml
+type: custom:swipe-card
+parameters:
+  pagination:
+    type: bullets
+  spaceBetween: 16
+cards:
+  # Card 1: 29G Community
+  - type: vertical-stack
+    cards:
+      - type: custom:mushroom-title-card
+        title: "29G Community"
+        subtitle: "{{ states('sensor.inkbird_29g_temperature') }}°F"
+      - type: custom:mini-graph-card
+        entities:
+          - sensor.inkbird_29g_temperature
+        hours_to_show: 24
+        line_width: 2
+        animate: true
+        show:
+          fill: true
+      - type: custom:mushroom-chips-card
+        chips:
+          - type: entity
+            entity: switch.tuya_29g_light
+            tap_action: { action: toggle }
+          - type: entity
+            entity: switch.shelly_29g_heater
+            tap_action: { action: toggle }
+          - type: entity
+            entity: switch.shelly_29g_filter
+            tap_action: { action: toggle }
+
+  # Card 2: 10G Shrimp
+  - type: vertical-stack
+    cards:
+      - type: custom:mushroom-title-card
+        title: "10G Shrimp"
+        subtitle: "{{ states('sensor.inkbird_10g_temperature') }}°F"
+      - type: custom:mini-graph-card
+        entities:
+          - sensor.inkbird_10g_temperature
+        hours_to_show: 24
+        line_width: 2
+        animate: true
+        show:
+          fill: true
+      - type: custom:mushroom-chips-card
+        chips:
+          - type: entity
+            entity: switch.tuya_10g_light
+            tap_action: { action: toggle }
+          - type: entity
+            entity: switch.shelly_10g_heater
+            tap_action: { action: toggle }
+          - type: entity
+            entity: switch.shelly_10g_filter
+            tap_action: { action: toggle }
+```
+
+## Step 9: Auto-Entities for Dynamic Cards
+
+Automatically show only devices that are currently on — no clutter from off devices:
+
+```yaml
+type: custom:auto-entities
+card:
+  type: entities
+  title: "Active Devices"
+  show_header_toggle: false
+filter:
+  include:
+    - domain: switch
+      state: "on"
+      attributes:
+        friendly_name: "*aquarium*"
+    - domain: switch
+      state: "on"
+      attributes:
+        friendly_name: "*tank*"
+  exclude:
+    - entity_id: "*vacation*"
+sort:
+  method: friendly_name
+```
+
+## Complete Custom Card Dashboard
+
+Here's how it all comes together — the full YAML for a modern 2-tank dashboard:
+
+```yaml
+views:
+  - title: "Aquarium"
+    icon: mdi:fish
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+          # ── Chip bar ──
+          - type: custom:mushroom-chips-card
+            alignment: center
+            chips:
+              - type: template
+                icon: mdi:thermometer
+                icon_color: teal
+                content: "Avg {{ states('sensor.all_tanks_average_temperature') }}°F"
+              - type: template
+                icon: mdi:flash
+                icon_color: yellow
+                content: "{{ states('sensor.all_tanks_total_power') }}W"
+              - type: entity
+                entity: input_boolean.vacation_mode
+                icon: mdi:airplane
+
+          # ── Temperature overlay ──
+          - type: custom:mini-graph-card
+            entities:
+              - entity: sensor.inkbird_29g_temperature
+                name: "29G"
+                color: "#00d4aa"
+              - entity: sensor.inkbird_10g_temperature
+                name: "10G"
+                color: "#3b82f6"
+            name: "Temperature — All Tanks"
+            hours_to_show: 48
+            line_width: 2
+            animate: true
+            show:
+              legend: true
+              fill: false
+
+          # ── Tank columns ──
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: vertical-stack
+                cards:
+                  - type: custom:mushroom-title-card
+                    title: "29G Community"
+                  - type: custom:mini-graph-card
+                    entities:
+                      - sensor.inkbird_29g_temperature
+                    hours_to_show: 24
+                    line_width: 2
+                    show: { fill: true, labels: true }
+                  - type: grid
+                    columns: 3
+                    square: false
+                    cards:
+                      - type: custom:mushroom-entity-card
+                        entity: switch.tuya_29g_light
+                        icon_color: amber
+                        layout: vertical
+                        tap_action: { action: toggle }
+                      - type: custom:mushroom-entity-card
+                        entity: switch.shelly_29g_heater
+                        icon_color: red
+                        layout: vertical
+                        tap_action: { action: toggle }
+                      - type: custom:mushroom-entity-card
+                        entity: switch.shelly_29g_filter
+                        icon_color: blue
+                        layout: vertical
+                        tap_action: { action: toggle }
+              - type: vertical-stack
+                cards:
+                  - type: custom:mushroom-title-card
+                    title: "10G Shrimp"
+                  - type: custom:mini-graph-card
+                    entities:
+                      - sensor.inkbird_10g_temperature
+                    hours_to_show: 24
+                    line_width: 2
+                    show: { fill: true, labels: true }
+                  - type: grid
+                    columns: 3
+                    square: false
+                    cards:
+                      - type: custom:mushroom-entity-card
+                        entity: switch.tuya_10g_light
+                        icon_color: amber
+                        layout: vertical
+                        tap_action: { action: toggle }
+                      - type: custom:mushroom-entity-card
+                        entity: switch.shelly_10g_heater
+                        icon_color: red
+                        layout: vertical
+                        tap_action: { action: toggle }
+                      - type: custom:mushroom-entity-card
+                        entity: switch.shelly_10g_filter
+                        icon_color: blue
+                        layout: vertical
+                        tap_action: { action: toggle }
+
+          # ── Energy chart ──
+          - type: custom:apexcharts-card
+            header:
+              title: "Power — 24h"
+            graph_span: 24h
+            series:
+              - entity: sensor.shelly_29g_heater_power
+                name: "29G Heat"
+                color: "#ef4444"
+                type: area
+                opacity: 0.3
+              - entity: sensor.shelly_10g_heater_power
+                name: "10G Heat"
+                color: "#f59e0b"
+                type: area
+                opacity: 0.3
+```
+
+## Tips
+
+- **Install card-mod first** — it lets you override CSS on any card for consistent styling
+- **Use `animate: true`** on mini-graph-card — the smooth line drawing looks great
+- **Keep mushroom cards in vertical layout** for tight grids — they're more compact
+- **Test on mobile** after every major change — the grid behaves differently on small screens
+- **Back up your dashboard YAML** — one bad edit can wipe your layout
+
+## What's Next?
+
+- [Multi-Tank Command Center](/guides/dashboard-multi-tank) — stock HA cards version if you don't want HACS
+- [Wall-Mounted Kiosk Display](/guides/dashboard-kiosk) — dedicated tablet display with auto-dim
+- [Scene Control with Lutron Pico](/guides/automate-scenes) — physical buttons for your dashboard scenes
