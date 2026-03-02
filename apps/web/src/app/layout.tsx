@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
+import { Suspense } from "react";
 import { CartProvider } from "@/components/cart/cart-context";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
+import { ScrollRestoration } from "@/components/scroll-restoration";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,6 +49,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <GoogleAnalytics />
+        <Suspense>
+          <ScrollRestoration />
+        </Suspense>
         <CartProvider>
           <div className="flex min-h-screen flex-col">
             <Header />

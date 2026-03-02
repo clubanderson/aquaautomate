@@ -46,7 +46,9 @@ export function FilterSidebar({
   const updateFilters = useCallback(
     (newFilters: ProductFilters) => {
       const qs = serializeFilters(newFilters);
-      router.push(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+      /* replace (not push) so back button returns to the previous page
+         instead of stepping through every individual filter change */
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
     },
     [router, pathname]
   );
@@ -80,7 +82,7 @@ export function FilterSidebar({
   );
 
   const clearAll = useCallback(() => {
-    router.push(pathname, { scroll: false });
+    router.replace(pathname, { scroll: false });
   }, [router, pathname]);
 
   const hasActiveFilters =

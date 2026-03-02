@@ -18,7 +18,7 @@ export function ActiveFilters({ filters }: ActiveFiltersProps) {
   const updateFilters = useCallback(
     (newFilters: ProductFilters) => {
       const qs = serializeFilters(newFilters);
-      router.push(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
     },
     [router, pathname]
   );

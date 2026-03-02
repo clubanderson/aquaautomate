@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { useProductSearch } from "@/hooks/use-product-search";
 const MAX_AUTOCOMPLETE_RESULTS = 5;
 
 export function SearchBar() {
+  const router = useRouter();
   const { query, search, results } = useProductSearch();
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
@@ -60,13 +62,13 @@ export function SearchBar() {
     } else if (e.key === "Enter") {
       if (highlightIndex >= 0 && displayed[highlightIndex]) {
         const item = displayed[highlightIndex];
-        const href =
-          item.source === "amazon" && item.externalUrl
-            ? item.externalUrl
-            : `/products/${item.handle}`;
-        window.location.href = href;
+        if (item.source === "amazon" && item.externalUrl) {
+          window.open(item.externalUrl, "_blank", "noopener,noreferrer");
+        } else {
+          router.push(`/products/${item.handle}`);
+        }
       } else if (query.length > 0) {
-        window.location.href = `/search?q=${encodeURIComponent(query)}`;
+        router.push(`/search?q=${encodeURIComponent(query)}`);
       }
       setOpen(false);
     } else if (e.key === "Escape") {
