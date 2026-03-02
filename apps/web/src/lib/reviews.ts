@@ -28,7 +28,7 @@ export interface ReviewSummary {
 const REVIEWS: ProductReview[] = [
   {
     id: "r1",
-    productId: "amazon-fluval-307",
+    productId: "amazon-B07JHG13WP",
     author: "TankEnthusiast",
     rating: 5,
     title: "Best canister filter I've owned",
@@ -38,7 +38,7 @@ const REVIEWS: ProductReview[] = [
   },
   {
     id: "r2",
-    productId: "amazon-fluval-307",
+    productId: "amazon-B07JHG13WP",
     author: "PlantedTankPro",
     rating: 4,
     title: "Great filter, minor complaints",
@@ -48,7 +48,7 @@ const REVIEWS: ProductReview[] = [
   },
   {
     id: "r3",
-    productId: "amazon-fluval-307",
+    productId: "amazon-B07JHG13WP",
     author: "ReefNewbie",
     rating: 5,
     title: "Whisper quiet",
@@ -58,7 +58,7 @@ const REVIEWS: ProductReview[] = [
   },
   {
     id: "r4",
-    productId: "amazon-inkbird-308",
+    productId: "amazon-B07X1JT372",
     author: "BreederMike",
     rating: 5,
     title: "Essential for any serious keeper",
@@ -68,7 +68,7 @@ const REVIEWS: ProductReview[] = [
   },
   {
     id: "r5",
-    productId: "amazon-inkbird-308",
+    productId: "amazon-B07X1JT372",
     author: "SaltwaterSam",
     rating: 4,
     title: "Reliable temp controller",
@@ -78,7 +78,7 @@ const REVIEWS: ProductReview[] = [
   },
   {
     id: "r6",
-    productId: "amazon-hygger-light",
+    productId: "amazon-B07H333NG2",
     author: "AquascapeAndy",
     rating: 4,
     title: "Great value planted tank light",
@@ -88,7 +88,7 @@ const REVIEWS: ProductReview[] = [
   },
   {
     id: "r7",
-    productId: "amazon-hygger-light",
+    productId: "amazon-B07H333NG2",
     author: "BettaBabe",
     rating: 5,
     title: "My betta loves the moonlight mode",
@@ -98,7 +98,7 @@ const REVIEWS: ProductReview[] = [
   },
   {
     id: "r8",
-    productId: "amazon-tuya-plug-4pk",
+    productId: "amazon-B086WXTQNP",
     author: "HomeAssistantFan",
     rating: 5,
     title: "Perfect for aquarium automation",
@@ -108,7 +108,7 @@ const REVIEWS: ProductReview[] = [
   },
   {
     id: "r9",
-    productId: "amazon-tuya-plug-4pk",
+    productId: "amazon-B086WXTQNP",
     author: "NanoTankNerd",
     rating: 4,
     title: "Compact and reliable",
@@ -118,7 +118,7 @@ const REVIEWS: ProductReview[] = [
   },
   {
     id: "r10",
-    productId: "amazon-shelly-plug-s",
+    productId: "amazon-B0D6GNQMDG",
     author: "PowerUser",
     rating: 5,
     title: "Local control + energy monitoring",

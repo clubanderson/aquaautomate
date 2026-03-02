@@ -153,7 +153,7 @@ const UV_LIGHTS: NormalizedProduct[] = [
     description:
       "Inline UV sterilizer with turbo-twist flow design for maximum UV exposure. Eliminates free-floating algae, bacteria, and parasites.",
     price: "64.99",
-    imageUrl: "https://m.media-amazon.com/images/I/71yNeyLvpPL._AC_SL1500_.jpg",
+    imageUrl: "https://m.media-amazon.com/images/I/61kjz8d1vxL._AC_SL1500_.jpg",
     vendor: "Coralife",
     productType: "UV LIGHT",
     tags: ["uv", "sterilizer", "inline", "freshwater", "saltwater", "equipment"],
@@ -424,12 +424,12 @@ const AQUARIUM_CONTROLS: NormalizedProduct[] = [
     automationCompatible: true,
   }),
   createAmazonProduct({
-    asin: "B08YDH3B2N",
-    title: "Shelly Plus Plug S — WiFi Smart Plug with Power Monitoring",
+    asin: "B0D6GNQMDG",
+    title: "Shelly Plus Plug US — WiFi Smart Plug with Power Monitoring",
     description:
       "Compact WiFi smart plug with real-time power monitoring. Runs local firmware — no cloud required. Native Home Assistant integration via Shelly. Perfect for controlling individual aquarium devices.",
     price: "17.99",
-    imageUrl: "https://m.media-amazon.com/images/I/61kBLkEdSpL._AC_SL1500_.jpg",
+    imageUrl: "https://m.media-amazon.com/images/I/813Yo25ALKL._AC_SL1500_.jpg",
     vendor: "Shelly",
     productType: "AQUARIUM CONTROLS",
     tags: ["smart-plug", "shelly", "wifi", "automation", "home-assistant", "local-control", "equipment"],
@@ -448,24 +448,24 @@ const AQUARIUM_CONTROLS: NormalizedProduct[] = [
     automationCompatible: true,
   }),
   createAmazonProduct({
-    asin: "B00KLAXFQA",
-    title: "Lutron Pico Remote (5-Button) — Wireless Scene Controller",
+    asin: "B00KLAXFQ0",
+    title: "Lutron Pico Remote — Wireless Scene Controller for Caseta",
     description:
-      "Wireless 5-button scene controller. Pair with Lutron Caseta bridge for Home Assistant tank scene control — one button for day mode, night mode, feeding mode, and more.",
+      "Wireless scene controller for Lutron Caseta. Pair with Caseta Smart Bridge for Home Assistant tank scene control — one button for day mode, night mode, feeding mode, and more.",
     price: "16.95",
-    imageUrl: "https://m.media-amazon.com/images/I/713DWJ4ssYL._SL1500_.jpg",
+    imageUrl: "https://m.media-amazon.com/images/I/51zNdEaqsiL._AC_SL1500_.jpg",
     vendor: "Lutron",
     productType: "AQUARIUM CONTROLS",
     tags: ["remote", "lutron", "scenes", "automation", "home-assistant", "equipment"],
     automationCompatible: true,
   }),
   createAmazonProduct({
-    asin: "B00NO7GH5C",
-    title: "Lutron Caseta Smart Bridge — Works with Home Assistant",
+    asin: "B00XPW67ZM",
+    title: "Lutron Caseta Smart Hub — Works with Home Assistant",
     description:
       "Hub for Lutron Caseta and Pico remotes. Native Home Assistant integration via Lutron Caseta Pro. Control aquarium lighting scenes, fans, and pumps with physical buttons.",
     price: "79.99",
-    imageUrl: "https://m.media-amazon.com/images/I/71FeZwdGc+L._AC_SL1500_.jpg",
+    imageUrl: "https://m.media-amazon.com/images/I/51vU5wLPWUL._AC_SL1500_.jpg",
     vendor: "Lutron",
     productType: "AQUARIUM CONTROLS",
     tags: ["hub", "lutron", "bridge", "automation", "home-assistant", "equipment"],
@@ -715,12 +715,12 @@ const TANKS: NormalizedProduct[] = [
     waterType: "freshwater",
   }),
   createAmazonProduct({
-    asin: "B0002APZO4",
+    asin: "B01MRCNVSY",
     title: "Aqueon Standard Glass Aquarium Tank — 10 Gallon",
     description:
       "Classic glass aquarium — the workhorse of the hobby. Clean silicone seams, distortion-free glass. Perfect for community fish, bettas, or shrimp.",
     price: "17.99",
-    imageUrl: "https://m.media-amazon.com/images/I/71aTm2JEeZL._AC_SL1200_.jpg",
+    imageUrl: "https://m.media-amazon.com/images/I/71cLcaNgpyL._AC_SL1500_.jpg",
     vendor: "Aqueon",
     productType: "TANK",
     tags: ["tank", "glass", "starter", "freshwater", "saltwater", "equipment"],
@@ -758,12 +758,12 @@ const STANDS: NormalizedProduct[] = [
     waterType: "both",
   }),
   createAmazonProduct({
-    asin: "B0193WVZ98",
+    asin: "B01MR19G8W",
     title: "Imagitarium Brooklyn Metal Tank Stand — 29 Gallon",
     description:
       "Industrial-style metal aquarium stand for 29 gallon tanks. Supports up to 300 lbs. Open shelving design, matte black. Sturdy and stylish.",
     price: "69.99",
-    imageUrl: "https://m.media-amazon.com/images/I/71a1WfvWFkL._AC_SL1500_.jpg",
+    imageUrl: "https://m.media-amazon.com/images/I/41sBkvj0BzL._AC_SL1500_.jpg",
     vendor: "Imagitarium",
     productType: "STAND",
     tags: ["stand", "metal", "furniture", "freshwater", "saltwater", "equipment"],
@@ -794,7 +794,7 @@ const CAMERAS: NormalizedProduct[] = [
     description:
       "2K HD aquarium camera with 140° wide-angle anti-glare lens, night vision, two-way audio, and AI-powered motion detection. Peel-and-stick glass mount installation. 24/7 cloud or SD card recording.",
     price: "36.99",
-    imageUrl: "https://m.media-amazon.com/images/I/61qJYLKbURL._AC_SL1500_.jpg",
+    imageUrl: "https://m.media-amazon.com/images/I/61f6WJ9LNzL._AC_SL1500_.jpg",
     vendor: "Amouu",
     productType: "CAMERA",
     tags: ["camera", "wifi", "aquarium", "monitoring", "smart-home", "equipment"],
@@ -807,7 +807,7 @@ const CAMERAS: NormalizedProduct[] = [
     description:
       "3MP terrarium and aquarium camera with close-up detail lens, dual-band WiFi (2.4G/5GHz), starlight color night vision, and AI motion detection. Easy magnetic install. Anti-glare, anti-reflection design.",
     price: "49.99",
-    imageUrl: "https://m.media-amazon.com/images/I/61nXnXkFURL._AC_SL1500_.jpg",
+    imageUrl: "https://m.media-amazon.com/images/I/71tYv-aVWaL._AC_SL1500_.jpg",
     vendor: "HomiQ",
     productType: "CAMERA",
     tags: ["camera", "wifi", "aquarium", "ai", "monitoring", "smart-home", "equipment"],
@@ -859,7 +859,7 @@ const CAMERAS: NormalizedProduct[] = [
     description:
       "Smart automatic fish feeder with built-in 2.5K HD camera, infrared night vision, and WiFi app control. 230mL capacity, timer scheduling, USB powered. Monitor and feed remotely.",
     price: "39.99",
-    imageUrl: "https://m.media-amazon.com/images/I/61YkLKbURL._AC_SL1500_.jpg",
+    imageUrl: "https://m.media-amazon.com/images/I/61EUP9DsgNL._AC_SL1500_.jpg",
     vendor: "Pawfly",
     productType: "AUTO FEEDER",
     tags: ["camera", "auto-feeder", "wifi", "smart-home", "aquarium", "monitoring", "equipment"],
