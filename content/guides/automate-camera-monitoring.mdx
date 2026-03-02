@@ -1,0 +1,228 @@
+---
+title: "Remote Tank Monitoring with IP Cameras & Home Assistant"
+slug: "automate-camera-monitoring"
+description: "Set up Wyze or Tuya cameras for 24/7 tank viewing, time-lapse recording, motion alerts for fish behavior, and integration with your Home Assistant dashboard."
+category: "automation"
+difficulty: "intermediate"
+author: "AquaAutomate"
+date: "2026-03-02"
+tags: ["camera", "monitoring", "wyze", "tuya", "home-assistant", "timelapse", "automation", "remote-viewing"]
+image: "/images/guides/camera-monitoring.jpg"
+---
+
+# Remote Tank Monitoring with IP Cameras & Home Assistant
+
+There's nothing like pulling up a live view of your tank from your phone while you're at work. IP cameras paired with Home Assistant let you watch your fish, record time-lapses, get alerts on unusual activity, and keep an eye on equipment — all remotely.
+
+## What You'll Need
+
+- **Wyze Cam v3** or **Tuya-compatible camera** — 1080p with night vision
+- **Home Assistant** — already set up ([see getting started guide](/guides/ha-getting-started))
+- Optional: **SD card** for local recording
+- Optional: **Camera mount or suction cup** for positioning
+
+## Camera Recommendations
+
+| Camera | Price | Best For | HA Integration |
+|---|---|---|---|
+| Wyze Cam v3 | ~$25 | Budget, great night vision | Wyze integration or RTSP firmware |
+| Tuya Smart Camera | ~$20-30 | Direct Tuya/HA integration | Tuya integration |
+| Reolink E1 | ~$35 | Pan/tilt, local storage | Reolink integration |
+| ESP32-CAM | ~$8 | DIY, ESPHome native | ESPHome (no cloud) |
+
+## Step 1: Position the Camera
+
+Camera placement matters for aquarium viewing:
+
+1. **Front angle** — eye-level with the tank, aimed through the front glass
+2. **Side angle** — captures depth and fish swimming patterns
+3. **Top-down** — sees the full tank surface, great for feeding time
+4. **Avoid backlighting** — don't point the camera at a window behind the tank
+
+**Tips**:
+- Use **night vision** (IR mode) to watch nocturnal behavior without disturbing fish
+- Position the camera slightly off-center to reduce glass reflections
+- A small LED behind the camera (not aimed at the glass) reduces glare
+
+## Step 2: Connect to Home Assistant
+
+### Wyze Camera (RTSP Method)
+
+1. Flash Wyze RTSP firmware (or use Wyze integration)
+2. Add to HA as a generic camera:
+
+```yaml
+# configuration.yaml
+camera:
+  - platform: generic
+    name: "Aquarium Camera"
+    stream_source: "rtsp://username:password@192.168.1.100/live"
+    still_image_url: "http://192.168.1.100/snapshot.jpg"
+```
+
+### Tuya Camera
+
+1. Add camera in the Tuya Smart app
+2. HA discovers it automatically through the Tuya integration
+3. Entity appears as `camera.tuya_aquarium_camera`
+
+### ESPHome Camera (DIY)
+
+Build a dedicated tank camera with an ESP32-CAM module:
+
+```yaml
+# esphome configuration
+esphome:
+  name: aquarium-camera
+
+esp32:
+  board: esp32cam
+
+camera:
+  - platform: esp32_camera
+    name: "Aquarium Camera"
+    resolution: 1024x768
+    jpeg_quality: 12
+    max_framerate: 15fps
+    idle_framerate: 5fps
+```
+
+## Step 3: Dashboard Live View
+
+Add a camera card to your aquarium dashboard:
+
+```yaml
+type: picture-glance
+title: "Aquarium Live"
+camera_image: camera.aquarium_camera
+camera_view: live
+entities:
+  - entity: sensor.inkbird_aquarium_temperature
+    name: "Temp"
+  - entity: switch.tuya_aquarium_light
+    name: "Light"
+  - entity: switch.tuya_air_pump
+    name: "Air"
+```
+
+This gives you a live camera feed with temperature and equipment status overlaid.
+
+## Step 4: Time-Lapse Recording
+
+Capture a frame every few minutes to build a time-lapse of your tank throughout the day:
+
+```yaml
+automation:
+  - alias: "Aquarium Time-Lapse Capture"
+    description: "Capture a snapshot every 5 minutes during daylight"
+    trigger:
+      - platform: time_pattern
+        minutes: "/5"
+    condition:
+      - condition: state
+        entity_id: switch.tuya_aquarium_light
+        state: "on"
+    action:
+      - service: camera.snapshot
+        target:
+          entity_id: camera.aquarium_camera
+        data:
+          filename: "/config/www/aquarium-timelapse/{{ now().strftime('%Y%m%d_%H%M%S') }}.jpg"
+```
+
+Then use ffmpeg to compile the snapshots into a video:
+
+```yaml
+# Run this in the HA terminal or as a shell command
+ffmpeg -framerate 30 -pattern_type glob -i '/config/www/aquarium-timelapse/*.jpg' -c:v libx264 -pix_fmt yuv420p timelapse.mp4
+```
+
+## Step 5: Smart Alerts
+
+### Movement Detection After Hours
+
+Get alerted if there's unusual activity (escaped fish, cat on the tank):
+
+```yaml
+automation:
+  - alias: "Aquarium — After Hours Motion Alert"
+    description: "Alert if camera detects motion when lights are off"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.aquarium_camera_motion
+        to: "on"
+    condition:
+      - condition: state
+        entity_id: switch.tuya_aquarium_light
+        state: "off"
+    action:
+      - service: camera.snapshot
+        target:
+          entity_id: camera.aquarium_camera
+        data:
+          filename: "/config/www/aquarium-alert.jpg"
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Aquarium Motion Detected"
+          message: "Motion detected at the tank while lights are off."
+          data:
+            image: "/local/aquarium-alert.jpg"
+```
+
+### Daily Tank Photo
+
+Automatically capture a photo of your tank every day at the same time — great for tracking plant growth and fish health over time:
+
+```yaml
+automation:
+  - alias: "Daily Tank Photo"
+    description: "Capture a snapshot at 2 PM daily"
+    trigger:
+      - platform: time
+        at: "14:00:00"
+    condition:
+      - condition: state
+        entity_id: switch.tuya_aquarium_light
+        state: "on"
+    action:
+      - service: camera.snapshot
+        target:
+          entity_id: camera.aquarium_camera
+        data:
+          filename: "/config/www/aquarium-daily/{{ now().strftime('%Y%m%d') }}.jpg"
+```
+
+## Multi-Tank Setup
+
+For multiple tanks, use one camera per tank and create a multi-camera dashboard:
+
+```yaml
+type: horizontal-stack
+cards:
+  - type: picture-entity
+    entity: camera.tank_1_camera
+    name: "29G Community"
+    show_state: false
+  - type: picture-entity
+    entity: camera.tank_2_camera
+    name: "10G Shrimp"
+    show_state: false
+  - type: picture-entity
+    entity: camera.tank_3_camera
+    name: "55G Cichlid"
+    show_state: false
+```
+
+## Tips
+
+- **IR night vision** reveals nocturnal fish behavior you never see during the day
+- **Disable the camera IR LED** if it causes fish stress — some fish react to the faint red glow
+- **Mount securely** — a camera falling into the tank is a bad day for everyone
+- **Local storage** via SD card is more reliable than cloud-only
+- **Clean the glass** where the camera points — algae on the glass ruins the image
+
+## What's Next?
+
+- [Build Your Dashboard](/guides/automate-dashboard) — add the camera feed to your complete aquarium dashboard
+- [Scene Control with Lutron Pico](/guides/automate-scenes) — one-button "viewing mode" with perfect lighting
+- [Smart Power Management](/guides/automate-power-management) — control all tank equipment from one place

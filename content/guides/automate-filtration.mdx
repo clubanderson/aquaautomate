@@ -1,0 +1,183 @@
+---
+title: "Smart Filter Monitoring & Maintenance Alerts"
+slug: "automate-filtration"
+description: "Use Shelly power-monitoring plugs and Home Assistant to track filter health, detect clogs, and get maintenance reminders — before your water quality tanks."
+category: "automation"
+difficulty: "easy"
+author: "AquaAutomate"
+date: "2026-03-02"
+tags: ["filter", "monitoring", "shelly", "tuya", "home-assistant", "maintenance", "automation"]
+products: ["aquaclear-50", "shelly-plus-plug-s"]
+image: "/images/guides/filtration.jpg"
+---
+
+# Smart Filter Monitoring & Maintenance Alerts
+
+Your filter is the life support system of your tank. When it clogs, slows down, or stops entirely, water quality drops fast. With a power-monitoring smart plug and Home Assistant, you can track filter health in real time and get alerts before problems become emergencies.
+
+## What You'll Need
+
+- **Any aquarium filter** — HOB, canister, or sponge (with air pump)
+- **Shelly Plus Plug S** — power monitoring smart plug (preferred for wattage tracking)
+- **Home Assistant** — already set up ([see getting started guide](/guides/ha-getting-started))
+- Optionally: **Tuya smart plug** for on/off control without power monitoring
+
+## Why Monitor Your Filter?
+
+A healthy filter draws consistent wattage. When something changes, it means something happened:
+
+| Power Change | What It Means |
+|---|---|
+| Sudden spike (+30%) | Impeller jam, debris caught in intake |
+| Gradual increase | Media clogging, impeller wearing out |
+| Sudden drop to 0W | Filter stopped — motor failure or unplugged |
+| Gradual decrease | Flow reducing as media gets dirty |
+
+## Step 1: Plug Your Filter into a Shelly
+
+1. Plug the **Shelly Plus Plug S** into a wall outlet
+2. Plug your filter into the Shelly
+3. Add to Home Assistant via the Shelly integration
+4. Note the baseline wattage (a healthy AquaClear 50 draws ~6W)
+
+## Step 2: Home Assistant Entities
+
+After adding the Shelly, you'll see these entities:
+
+```yaml
+# Shelly filter plug entities
+switch.shelly_aquarium_filter        # On/off control
+sensor.shelly_aquarium_filter_power  # Current wattage (W)
+sensor.shelly_aquarium_filter_energy # Cumulative energy (kWh)
+```
+
+## Step 3: Filter Health Automations
+
+### Filter Stopped Alert
+
+```yaml
+automation:
+  - alias: "Filter Stopped — Emergency Alert"
+    description: "Alert if filter power drops to 0W for more than 2 minutes"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.shelly_aquarium_filter_power
+        below: 0.5
+        for:
+          minutes: 2
+    condition:
+      - condition: state
+        entity_id: switch.shelly_aquarium_filter
+        state: "on"
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "FILTER STOPPED"
+          message: "Your aquarium filter is drawing 0W but the plug is ON. Motor failure or disconnect — check immediately!"
+          data:
+            priority: high
+            tag: "filter-stopped"
+```
+
+### Filter Clog Warning
+
+```yaml
+automation:
+  - alias: "Filter Clog Warning"
+    description: "Alert if filter power spikes above normal range"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.shelly_aquarium_filter_power
+        above: 10
+        for:
+          minutes: 5
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Filter Drawing High Power"
+          message: "Filter is pulling {{ states('sensor.shelly_aquarium_filter_power') }}W — may be clogged or jammed. Schedule maintenance."
+          data:
+            tag: "filter-clog"
+```
+
+### Monthly Maintenance Reminder
+
+```yaml
+automation:
+  - alias: "Filter Maintenance Reminder"
+    description: "Monthly reminder to clean filter media"
+    trigger:
+      - platform: time
+        at: "10:00:00"
+    condition:
+      - condition: template
+        value_template: "{{ now().day == 1 }}"
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Filter Maintenance Due"
+          message: "Time to rinse your filter media in old tank water. Don't use tap water — it kills beneficial bacteria!"
+          data:
+            tag: "filter-maintenance"
+```
+
+## Step 4: Dashboard Card
+
+Add a filter health card to your aquarium dashboard:
+
+```yaml
+type: vertical-stack
+title: "Filter Health"
+cards:
+  - type: entities
+    entities:
+      - entity: switch.shelly_aquarium_filter
+        name: "Filter Power"
+      - entity: sensor.shelly_aquarium_filter_power
+        name: "Current Draw"
+        icon: mdi:lightning-bolt
+  - type: history-graph
+    entities:
+      - entity: sensor.shelly_aquarium_filter_power
+        name: "Filter Wattage"
+    hours_to_show: 168
+    refresh_interval: 300
+```
+
+The 7-day power graph reveals patterns — you'll see the gradual increase as media clogs between cleanings.
+
+## Step 5: Auto-Restart After Power Outage
+
+Smart plugs can be configured to restore their previous state after a power outage. For the Shelly:
+
+1. In the Shelly app, go to **Settings → Power On Default**
+2. Set to **Restore Last State**
+3. This ensures your filter turns back on automatically after a power failure
+
+For Tuya plugs, set the same in the Tuya/Smart Life app under **Power-on Behavior**.
+
+## Filter Type Tips
+
+### HOB Filters (AquaClear, etc.)
+- Baseline: 4-8W depending on model
+- Clean when power rises 30%+ above baseline
+- Impeller rattle shows as fluctuating wattage
+
+### Canister Filters (Fluval, etc.)
+- Baseline: 10-25W depending on model
+- Monitor for air locks after maintenance (power drops but no flow)
+- Set up a "prime reminder" automation after power outage
+
+### Sponge Filters (Air Pump Powered)
+- Monitor the air pump, not the filter itself
+- Air pumps draw 3-5W — a drop means the diaphragm is wearing out
+
+## My Setup
+
+Every filter runs through a Shelly Plus Plug S. I have a Lovelace dashboard card that shows all filter wattages at a glance — if any deviate more than 20% from their baseline, the card turns yellow. One time I caught a failing impeller on my AquaClear 70 because the wattage kept creeping up over two weeks. Replaced the impeller for $8 instead of losing the whole filter.
+
+## What's Next?
+
+- [Temperature Monitoring](/guides/automate-temperature) — monitor water temp alongside filter health
+- [Smart Power Management](/guides/automate-power-management) — centralized power control for all devices
+- [Build Your Dashboard](/guides/automate-dashboard) — combine all monitoring into one screen
