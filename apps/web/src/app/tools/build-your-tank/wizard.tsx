@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   Check,
   ExternalLink,
   Info,
@@ -37,6 +38,71 @@ const STEP_PRODUCT_TYPES: Record<WizardStep, string[]> = {
   light: ["UV LIGHT"],
   substrate: ["GRAVEL"],
   review: [],
+};
+
+/** Related automation guides for each wizard step */
+interface StepGuide {
+  slug: string;
+  title: string;
+  description: string;
+}
+
+const STEP_GUIDES: Partial<Record<WizardStep, StepGuide[]>> = {
+  tank: [
+    {
+      slug: "getting-started",
+      title: "Getting Started with AquaAutomate",
+      description: "New to aquariums? Start here for budget build recommendations.",
+    },
+    {
+      slug: "ha-getting-started",
+      title: "Setting Up Home Assistant",
+      description: "Set up HA to automate all your tank equipment.",
+    },
+  ],
+  filter: [
+    {
+      slug: "automate-filtration",
+      title: "Smart Filter Monitoring & Alerts",
+      description: "Track filter health with Shelly plugs and get clog alerts.",
+    },
+    {
+      slug: "automate-power-management",
+      title: "Smart Power Management",
+      description: "Control filters, heaters, and pumps with smart plugs.",
+    },
+  ],
+  heater: [
+    {
+      slug: "automate-heater-sizing",
+      title: "Heater Sizing & Smart Plug Automation",
+      description: "Pick the right wattage and automate with failsafe control.",
+    },
+    {
+      slug: "automate-temperature",
+      title: "Temperature Monitoring & Alerts",
+      description: "Real-time monitoring with Inkbird + backup heater automation.",
+    },
+  ],
+  light: [
+    {
+      slug: "automate-tank-lighting",
+      title: "Automate Tank Lighting",
+      description: "Sunrise/sunset schedules with Hygger lights and Tuya plugs.",
+    },
+    {
+      slug: "automate-scenes",
+      title: "Scene Control with Lutron Pico",
+      description: "One-button Day/Night/Feeding/Movie modes for your tank.",
+    },
+  ],
+  substrate: [
+    {
+      slug: "automate-water-changes",
+      title: "Automated Water Changes",
+      description: "Full AWC automation with dosing pumps and HA.",
+    },
+  ],
 };
 
 /** Regex to extract gallon size from a tank title (e.g. "29 Gallon") */
@@ -248,6 +314,61 @@ export function TankWizard() {
             )}
           </div>
 
+          {/* Recommended guides based on selected products */}
+          {selectedProducts.length > 0 && (
+            <div className="rounded-lg border border-border/50 bg-card/30 p-4">
+              <div className="mb-3 flex items-center gap-1.5 text-sm font-medium">
+                <BookOpen className="h-4 w-4 text-aqua" />
+                Automate Your Setup
+              </div>
+              <p className="mb-3 text-xs text-muted-foreground">
+                These guides show you how to automate the equipment you selected with Home Assistant, Tuya smart plugs, and Shelly power monitors.
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {/* Deduplicate guides across all selected steps */}
+                {Array.from(
+                  new Map(
+                    Object.keys(selections)
+                      .filter((key) => key !== "review" && selections[key as WizardStep] !== null)
+                      .flatMap((key) => STEP_GUIDES[key as WizardStep] || [])
+                      .map((g) => [g.slug, g])
+                  ).values()
+                ).map((guide) => (
+                  <Link
+                    key={guide.slug}
+                    href={`/guides/${guide.slug}`}
+                    className="group flex items-start gap-2 rounded-md border border-border/30 bg-card/50 p-2.5 transition-colors hover:border-aqua/30 hover:bg-aqua/5"
+                  >
+                    <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-aqua" />
+                    <div>
+                      <p className="text-xs font-medium group-hover:text-aqua">
+                        {guide.title}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {guide.description}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+                {/* Always show dashboard guide on review */}
+                <Link
+                  href="/guides/automate-dashboard"
+                  className="group flex items-start gap-2 rounded-md border border-border/30 bg-card/50 p-2.5 transition-colors hover:border-aqua/30 hover:bg-aqua/5"
+                >
+                  <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-aqua" />
+                  <div>
+                    <p className="text-xs font-medium group-hover:text-aqua">
+                      Build Your Aquarium Dashboard
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      Combine all your sensors and controls into one HA dashboard.
+                    </p>
+                  </div>
+                </Link>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
@@ -364,6 +485,35 @@ export function TankWizard() {
             <p className="rounded-lg border border-border/50 bg-card/50 p-6 text-center text-sm text-muted-foreground">
               No products in this category yet. You can skip this step.
             </p>
+          )}
+
+          {/* Related automation guides for this step */}
+          {(STEP_GUIDES[step.id] || []).length > 0 && (
+            <div className="rounded-lg border border-border/50 bg-card/30 p-4">
+              <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <BookOpen className="h-3.5 w-3.5" />
+                Automation Guides
+              </div>
+              <div className="space-y-2">
+                {(STEP_GUIDES[step.id] || []).map((guide) => (
+                  <Link
+                    key={guide.slug}
+                    href={`/guides/${guide.slug}`}
+                    className="group flex items-start gap-2 rounded-md border border-border/30 bg-card/50 p-2.5 transition-colors hover:border-aqua/30 hover:bg-aqua/5"
+                  >
+                    <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-aqua" />
+                    <div>
+                      <p className="text-xs font-medium group-hover:text-aqua">
+                        {guide.title}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {guide.description}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
           )}
 
           <div className="flex items-center gap-3">

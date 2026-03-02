@@ -1,0 +1,184 @@
+---
+title: "Heater Sizing Guide & Smart Plug Automation"
+slug: "automate-heater-sizing"
+description: "Pick the right wattage heater for your tank size, then automate it with Tuya smart plugs and Home Assistant for failsafe temperature control."
+category: "automation"
+difficulty: "easy"
+author: "AquaAutomate"
+date: "2026-03-02"
+tags: ["heater", "sizing", "tuya", "shelly", "home-assistant", "temperature", "automation", "safety"]
+products: ["fluval-e-300w", "eheim-jager-150w", "cobalt-neo-therm", "hygger-100w"]
+image: "/images/guides/heater-sizing.jpg"
+---
+
+# Heater Sizing Guide & Smart Plug Automation
+
+Choosing the wrong heater wastes energy or — worse — can't keep up in winter. This guide helps you pick the right wattage for your tank, then shows you how to automate it with smart plugs for failsafe control.
+
+## The 3-5 Watts Per Gallon Rule
+
+The standard rule: **use 3–5 watts of heater power per gallon of tank water**. Use 3W/gal in warm rooms (75°F+), 5W/gal in cooler rooms or basements.
+
+| Tank Size | Warm Room (3W/gal) | Average (4W/gal) | Cool Room (5W/gal) |
+|---|---|---|---|
+| 5 gallon | 15W → use 25W | 20W → use 25W | 25W |
+| 10 gallon | 30W → use 50W | 40W → use 50W | 50W |
+| 20 gallon | 60W → use 75W | 80W → use 100W | 100W |
+| 29 gallon | 87W → use 100W | 116W → use 150W | 145W → use 150W |
+| 40 gallon | 120W → use 150W | 160W → use 200W | 200W |
+| 55 gallon | 165W → use 200W | 220W → use 250W | 275W → use 300W |
+| 75 gallon | 225W → use 250W | 300W | 375W → use 300W×2 |
+| 100 gallon | 300W | 400W → use 300W+200W | 500W |
+| 125 gallon | 375W → use 500W | 500W | 625W → use 300W+300W |
+
+**Pro tip**: For tanks 75 gallons and above, use **two heaters** instead of one massive heater. If one fails in the "on" position, the other one alone can't overheat the tank.
+
+## Recommended Heaters by Tank Size
+
+### Nano Tanks (5–10 Gallon)
+- **Fluval P 25W** ($12.99) — compact preset, great for portrait tanks
+- **Cobalt Neo-Therm 25W** ($29.99) — sleek flat design with digital thermostat
+- **Hygger 50W Titanium** ($16.99) — budget pick with external controller
+
+### Small Tanks (10–20 Gallon)
+- **Fluval P 50W** ($15.99) — slim preset heater
+- **Eheim Jager 50W** ($22.99) — German precision, adjustable
+- **Cobalt Neo-Therm 50W** ($32.99) — shatterproof with LED readout
+
+### Medium Tanks (20–40 Gallon)
+- **Fluval E 100W** ($39.99) — LCD display, dual sensors
+- **Eheim Jager 75W/150W** ($26.99/$35.99) — reliable workhorses
+- **Cobalt Neo-Therm 100W/150W** ($36.99/$39.99) — modern flat design
+- **Hygger 100W Titanium** ($29.99) — budget with external controller
+
+### Large Tanks (40–75 Gallon)
+- **Fluval E 200W** ($47.99) — LCD with dual temperature sensors
+- **Eheim Jager 200W/250W** ($39.99/$42.99) — proven reliability
+- **Cobalt Neo-Therm 200W/250W** ($44.99/$49.99) — shatterproof for large tanks
+- **Hygger 200W Titanium** ($34.99) — budget option with digital controller
+
+### Extra Large Tanks (75–125+ Gallon)
+- **Fluval E 300W** ($54.99) — top of the Fluval E line
+- **Eheim Jager 300W** ($47.99) — largest Jager model
+- **Hygger 500W Titanium** ($44.99) — single heater for big tanks
+- Or use **two mid-range heaters** for redundancy (recommended)
+
+## Smart Plug Automation
+
+Every heater in our catalog is **smart-plug compatible**. Plug it into a Tuya or Shelly smart plug to unlock Home Assistant control.
+
+### Why Automate Your Heater?
+
+1. **Stuck-on protection** — if the heater thermostat fails "on," HA can kill power before the tank overheats
+2. **Energy monitoring** — track how much energy your heater uses (Shelly plugs show wattage)
+3. **Backup heater control** — a second heater on a separate plug activates automatically if the primary fails
+4. **Seasonal scheduling** — reduce heater power in summer, increase in winter
+
+### Basic Smart Plug Setup
+
+1. Plug a **Tuya smart plug** or **Shelly Plus Plug S** into the wall
+2. Plug your heater into the smart plug
+3. Add to Home Assistant (Tuya or Shelly integration)
+4. **Important**: Set the smart plug to **Restore Last State** on power recovery
+
+### Stuck Heater Safety Automation
+
+This automation cuts power to the heater if the tank exceeds a safe maximum temperature — catching a stuck thermostat before it cooks your fish.
+
+```yaml
+automation:
+  - alias: "Emergency Heater Shutoff — Overheat Protection"
+    description: "Kill heater power if water exceeds 84°F"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.inkbird_aquarium_temperature
+        above: 84
+        for:
+          minutes: 3
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_heater_plug
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "HEATER EMERGENCY SHUTOFF"
+          message: "Tank hit {{ states('sensor.inkbird_aquarium_temperature') }}°F! Heater power cut. Check immediately."
+          data:
+            priority: high
+            tag: "heater-emergency"
+```
+
+### Dual Heater Failover
+
+For tanks 75 gallons and above, run two heaters on separate smart plugs:
+
+```yaml
+automation:
+  - alias: "Activate Secondary Heater"
+    description: "Turn on backup heater if primary can't maintain temperature"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.inkbird_aquarium_temperature
+        below: 74
+        for:
+          minutes: 20
+    condition:
+      - condition: state
+        entity_id: switch.tuya_primary_heater
+        state: "on"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_secondary_heater
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Secondary Heater Activated"
+          message: "Primary heater can't keep up. Secondary is ON. Temp: {{ states('sensor.inkbird_aquarium_temperature') }}°F"
+```
+
+### Energy Monitoring Dashboard
+
+Track heater energy usage with a Shelly plug:
+
+```yaml
+type: vertical-stack
+title: "Heater Status"
+cards:
+  - type: gauge
+    entity: sensor.inkbird_aquarium_temperature
+    name: "Water Temperature"
+    unit: "°F"
+    min: 65
+    max: 90
+    severity:
+      green: 75
+      yellow: 80
+      red: 84
+  - type: entities
+    entities:
+      - entity: sensor.shelly_heater_power
+        name: "Heater Draw"
+        icon: mdi:lightning-bolt
+      - entity: sensor.shelly_heater_energy
+        name: "Energy Today"
+        icon: mdi:meter-electric
+  - type: history-graph
+    entities:
+      - entity: sensor.shelly_heater_power
+        name: "Heater Wattage"
+    hours_to_show: 24
+```
+
+## Tips
+
+- **Never run a heater without water** — set up a "heater safety" automation that only allows the plug to turn on when you confirm the tank is full
+- **Shatterproof heaters** (Cobalt Neo-Therm) are safer near aggressive fish
+- **Titanium heaters** (Hygger) are best for saltwater — no glass to crack from salt creep
+- **Check heater accuracy** every few months with a reliable thermometer — thermostat drift is real
+- **Place the heater near a filter intake** for even heat distribution
+
+## What's Next?
+
+- [Temperature Monitoring](/guides/automate-temperature) — add Inkbird WiFi monitoring for real-time alerts
+- [Smart Power Management](/guides/automate-power-management) — centralized control for all equipment
+- [Build Your Dashboard](/guides/automate-dashboard) — see temperature and heater status at a glance

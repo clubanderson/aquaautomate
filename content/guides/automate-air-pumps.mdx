@@ -1,0 +1,211 @@
+---
+title: "Automated Air Pump Scheduling for Optimal Oxygenation"
+slug: "automate-air-pumps"
+description: "Schedule air pumps and air stones with Tuya smart plugs for nighttime oxygenation, surface agitation, and sponge filter timing — all through Home Assistant."
+category: "automation"
+difficulty: "easy"
+author: "AquaAutomate"
+date: "2026-03-02"
+tags: ["air-pump", "oxygenation", "tuya", "home-assistant", "sponge-filter", "automation", "scheduling"]
+products: ["pawfly-air-stone-2in", "pawfly-air-stone-4in"]
+image: "/images/guides/air-pumps.jpg"
+---
+
+# Automated Air Pump Scheduling for Optimal Oxygenation
+
+Plants produce oxygen during the day but consume it at night. Heavily stocked or planted tanks can see oxygen levels drop dangerously while you sleep. Automating your air pump to run at night — or during specific conditions — keeps oxygen levels safe without the constant noise during the day.
+
+## What You'll Need
+
+- **Aquarium air pump** — any standard model (Tetra Whisper, Hygger, etc.)
+- **Air stone or sponge filter** — to diffuse the air into fine bubbles
+- **Tuya smart plug** or **Shelly plug** — for schedule control
+- **Home Assistant** — already set up ([see getting started guide](/guides/ha-getting-started))
+
+## Why Automate Air Pumps?
+
+Running an air pump 24/7 works but has downsides:
+- **Constant noise** — air pumps are the loudest piece of aquarium equipment
+- **CO2 offgassing** — surface agitation drives off CO2, which planted tanks need during the day
+- **Energy waste** — your tank may not need aeration during daylight hours when plants are producing oxygen
+
+Smart scheduling solves all three.
+
+## Step 1: Set Up the Smart Plug
+
+1. Plug a **Tuya smart plug** into the wall
+2. Plug your air pump into the smart plug
+3. Connect the air stone or sponge filter to the air pump with airline tubing
+4. Add the plug to Home Assistant via Tuya integration
+
+```yaml
+# Tuya plug entities
+switch.tuya_air_pump          # On/off control
+sensor.tuya_air_pump_power    # Power draw (if plug supports it)
+```
+
+## Step 2: Nighttime Oxygenation Schedule
+
+The most common automation: run the air pump from lights-off to lights-on.
+
+```yaml
+automation:
+  - alias: "Air Pump — Night Oxygenation On"
+    description: "Start air pump when tank lights turn off"
+    trigger:
+      - platform: state
+        entity_id: switch.tuya_aquarium_light
+        to: "off"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_air_pump
+
+  - alias: "Air Pump — Night Oxygenation Off"
+    description: "Stop air pump when tank lights come on"
+    trigger:
+      - platform: state
+        entity_id: switch.tuya_aquarium_light
+        to: "on"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_air_pump
+```
+
+### Fixed-Time Alternative
+
+If you don't automate your lights, use a simple time-based schedule:
+
+```yaml
+automation:
+  - alias: "Air Pump — Night Schedule"
+    description: "Run air pump from 10 PM to 8 AM"
+    trigger:
+      - platform: time
+        at: "22:00:00"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_air_pump
+
+  - alias: "Air Pump — Morning Off"
+    trigger:
+      - platform: time
+        at: "08:00:00"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_air_pump
+```
+
+## Step 3: High Temperature Oxygenation
+
+Warm water holds less dissolved oxygen. This automation activates the air pump when water temperature rises — critical during summer or after a heater malfunction.
+
+```yaml
+automation:
+  - alias: "Air Pump — High Temp Oxygenation"
+    description: "Activate air pump if water exceeds 82°F"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.inkbird_aquarium_temperature
+        above: 82
+        for:
+          minutes: 5
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_air_pump
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Air Pump Activated — High Temp"
+          message: "Water at {{ states('sensor.inkbird_aquarium_temperature') }}°F. Air pump ON for extra oxygenation."
+
+  - alias: "Air Pump — Temp Recovered"
+    description: "Turn off air pump when temp drops back to normal"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.inkbird_aquarium_temperature
+        below: 80
+        for:
+          minutes: 10
+    condition:
+      - condition: state
+        entity_id: switch.tuya_aquarium_light
+        state: "on"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_air_pump
+```
+
+## Step 4: Feeding Mode Integration
+
+Some fish feed better without heavy surface agitation. Turn off the air pump during feeding and back on after:
+
+```yaml
+script:
+  feeding_mode:
+    alias: "Feeding Mode"
+    sequence:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_air_pump
+      - delay:
+          minutes: 15
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_air_pump
+```
+
+Link this to a Lutron Pico button or dashboard toggle — see the [Scene Control guide](/guides/automate-scenes).
+
+## Step 5: Sponge Filter Timing
+
+If your sponge filter runs off the same air pump, automating the pump means automating your filtration. For tanks that rely on sponge filters as primary filtration, **run the pump 24/7** or at minimum 18 hours per day to maintain the bacteria colony.
+
+```yaml
+automation:
+  - alias: "Sponge Filter — Minimum 18hr Run"
+    description: "Ensure air pump runs at least 18 hours per day"
+    trigger:
+      - platform: time
+        at: "02:00:00"
+    condition:
+      - condition: state
+        entity_id: switch.tuya_air_pump
+        state: "off"
+        for:
+          hours: 6
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_air_pump
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Air Pump Override"
+          message: "Air pump was off for 6+ hours. Turned ON to protect sponge filter bacteria."
+```
+
+## Air Stone Sizing Guide
+
+| Tank Size | Air Stone Size | Air Pump |
+|---|---|---|
+| 5–10 gallon | 2-inch disc | Tetra Whisper 10 or Hygger mini |
+| 20–30 gallon | 2-inch disc | Tetra Whisper 20 |
+| 40–55 gallon | 4-inch disc | Tetra Whisper 40 or dual 2-inch |
+| 75–125 gallon | 4-inch disc × 2 | Hygger dual-outlet or linear bar |
+
+## Tips
+
+- **Use a check valve** on the airline tubing to prevent siphoning if the pump stops
+- **Planted tanks**: Run air pumps only at night — daytime aeration drives off CO2 your plants need
+- **Quiet setup**: Hang the air pump above the water line and use a foam pad underneath to reduce vibration noise
+- **Adjust flow**: Use a gang valve to control how much air reaches each air stone
+
+## What's Next?
+
+- [Temperature Monitoring](/guides/automate-temperature) — combine oxygenation with temperature alerts
+- [Scene Control with Lutron Pico](/guides/automate-scenes) — one-button feeding mode that pauses air
+- [Build Your Dashboard](/guides/automate-dashboard) — see all pump statuses at a glance
