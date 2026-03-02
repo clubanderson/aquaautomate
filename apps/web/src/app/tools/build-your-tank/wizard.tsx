@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -265,6 +265,52 @@ const INITIAL_SELECTIONS: WizardSelections = {
   review: null,
 };
 
+/* ── Fish URL param matching ──────────────────────────────────────────── */
+
+/** Radix for parseInt in fish param parsing */
+const FISH_PARSE_RADIX = 10;
+
+/** Index of the tank step — wizard skips to here when fish are pre-selected */
+const TANK_STEP_INDEX = 1;
+
+/**
+ * Match species names from the calculator URL param to real fish products.
+ * URL format: "Neon+Tetra:6,Guppy:3"
+ * Matches by checking if the product title contains the species name (case-insensitive).
+ */
+function matchFishFromParam(
+  fishParam: string | null,
+  allProducts: NormalizedProduct[],
+): NormalizedProduct[] {
+  if (!fishParam) return [];
+
+  const fishProducts = allProducts.filter(
+    (p) => (p.productType || "") === "Fish & Livestock" && p.availableForSale !== false,
+  );
+
+  const matched: NormalizedProduct[] = [];
+  const entries = fishParam.split(",");
+
+  for (const entry of entries) {
+    const colonIdx = entry.lastIndexOf(":");
+    if (colonIdx <= 0) continue;
+    const species = decodeURIComponent(entry.slice(0, colonIdx)).trim();
+    const count = parseInt(entry.slice(colonIdx + 1), FISH_PARSE_RADIX);
+    if (!species || Number.isNaN(count) || count <= 0) continue;
+
+    /* Find a fish product whose title contains the species name */
+    const speciesLower = species.toLowerCase();
+    const match = fishProducts.find(
+      (p) => p.title.toLowerCase().includes(speciesLower),
+    );
+    if (match && !matched.some((m) => m.id === match.id)) {
+      matched.push(match);
+    }
+  }
+
+  return matched;
+}
+
 /* ── Component props ─────────────────────────────────────────────────── */
 
 interface TankWizardProps {
@@ -281,8 +327,24 @@ export function TankWizard({ products }: TankWizardProps) {
     ? Number(searchParams.get("minGallons"))
     : null;
 
-  const [currentStep, setCurrentStep] = useState(0);
-  const [selections, setSelections] = useState<WizardSelections>(INITIAL_SELECTIONS);
+  /** Fish pre-selected from calculator URL param — matched to real products */
+  const preselectedFish = useMemo(
+    () => matchFishFromParam(searchParams.get("fish"), products),
+    [searchParams, products],
+  );
+
+  const hasPreselectedFish = preselectedFish.length > 0;
+
+  /** Compute initial selections and step — only once via lazy initializer */
+  const buildInitialSelections = useCallback((): WizardSelections => ({
+    ...INITIAL_SELECTIONS,
+    fish: preselectedFish,
+  }), [preselectedFish]);
+
+  const [currentStep, setCurrentStep] = useState(
+    () => hasPreselectedFish ? TANK_STEP_INDEX : 0,
+  );
+  const [selections, setSelections] = useState<WizardSelections>(buildInitialSelections);
 
   const step = STEPS[currentStep];
   const isReview = step.id === "review";
@@ -581,6 +643,20 @@ export function TankWizard({ products }: TankWizardProps) {
               <h2 className="text-xl font-bold capitalize">
                 {isMultiSelect ? `Choose Your ${step.label}` : `Choose a ${step.label}`}
               </h2>
+
+              {/* Info: fish pre-selected from calculator */}
+              {step.id === "fish" && hasPreselectedFish && (
+                <div className="flex items-center gap-2 rounded-md border border-green-600/30 bg-green-600/5 px-3 py-2 text-xs text-muted-foreground">
+                  <Check className="h-3.5 w-3.5 shrink-0 text-green-400" />
+                  <span>
+                    <span className="font-medium text-green-400">
+                      {preselectedFish.length} fish
+                    </span>{" "}
+                    pre-selected from the Tank Calculator. You can adjust your
+                    selections below.
+                  </span>
+                </div>
+              )}
 
               {/* Info: multi-select hint for fish */}
               {isMultiSelect && (
