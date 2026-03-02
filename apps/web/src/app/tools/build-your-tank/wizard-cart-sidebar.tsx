@@ -4,10 +4,10 @@ import Link from "next/link";
 import {
   BookOpen,
   ExternalLink,
-  Fish,
   Package,
   ShoppingBag,
   Sparkles,
+  Store,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -22,12 +22,6 @@ export interface WizardCartItem {
   product: NormalizedProduct;
 }
 
-/** Fish selection carried from the tank calculator */
-export interface WizardFishSelection {
-  species: string;
-  count: number;
-}
-
 /** Related automation guide */
 interface StepGuide {
   slug: string;
@@ -37,10 +31,9 @@ interface StepGuide {
 
 export interface WizardCartSidebarProps {
   items: WizardCartItem[];
-  fishSelections: WizardFishSelection[];
   recommendations: NormalizedProduct[];
   stepGuides: StepGuide[];
-  onRemoveItem: (stepId: string) => void;
+  onRemoveItem: (stepId: string, productId?: string) => void;
   onSelectStep: (stepId: string) => void;
 }
 
@@ -49,13 +42,24 @@ function formatPrice(amount: string): string {
   return `$${Number(amount).toFixed(2)}`;
 }
 
+/** Get the appropriate link for a product based on its source */
+function getProductLink(product: NormalizedProduct): {
+  href: string;
+  external: boolean;
+} {
+  if (product.source === "amazon" && product.externalUrl) {
+    return { href: product.externalUrl, external: true };
+  }
+  return { href: `/products/${product.handle}`, external: false };
+}
+
 /**
- * Persistent right-side cart panel showing selections, fish, totals,
+ * Persistent right-side cart panel showing selections, totals,
  * recommendations, and step-specific automation guides.
+ * Each item shows its vendor/source for multi-vendor attribution.
  */
 export function WizardCartSidebar({
   items,
-  fishSelections,
   recommendations,
   stepGuides,
   onRemoveItem,
@@ -74,10 +78,14 @@ export function WizardCartSidebar({
     return sum + Math.max(0, compare - price);
   }, 0);
 
-  const handleOpenAllOnAmazon = () => {
+  /** Open all product links — Amazon in new tabs, Shopify in new tabs */
+  const handleOpenAllLinks = () => {
     for (const item of items) {
-      if (item.product.externalUrl) {
-        window.open(item.product.externalUrl, "_blank", "noopener,noreferrer");
+      const link = getProductLink(item.product);
+      if (link.external) {
+        window.open(link.href, "_blank", "noopener,noreferrer");
+      } else {
+        window.open(link.href, "_blank");
       }
     }
   };
@@ -99,11 +107,11 @@ export function WizardCartSidebar({
         </div>
 
         {/* Empty state */}
-        {items.length === 0 && fishSelections.length === 0 && (
+        {items.length === 0 && (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-border/30 bg-card/30 py-8 text-center">
             <Package className="h-8 w-8 text-muted-foreground/50" />
             <p className="text-xs text-muted-foreground">
-              Select equipment to build your list
+              Select products to build your list
             </p>
           </div>
         )}
@@ -111,66 +119,74 @@ export function WizardCartSidebar({
         {/* Equipment list */}
         {items.length > 0 && (
           <div className="space-y-2">
-            {items.map((item) => (
-              <div
-                key={item.stepId}
-                className="group rounded-lg border border-border/50 bg-card/30 p-2.5"
-              >
-                <div className="flex items-start gap-2">
-                  <button
-                    onClick={() => onSelectStep(item.stepId)}
-                    className="flex-1 text-left"
-                    title="Click to change selection"
-                  >
-                    <Badge
-                      variant="secondary"
-                      className="mb-1 text-[10px] capitalize"
-                    >
-                      {item.stepLabel}
-                    </Badge>
-                    <p className="line-clamp-2 text-xs font-medium leading-snug">
-                      {item.product.title}
-                    </p>
-                  </button>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <span className="text-xs font-medium text-aqua">
-                      {formatPrice(item.product.price.amount)}
-                    </span>
+            {items.map((item) => {
+              const link = getProductLink(item.product);
+              return (
+                <div
+                  key={`${item.stepId}-${item.product.id}`}
+                  className="group rounded-lg border border-border/50 bg-card/30 p-2.5"
+                >
+                  <div className="flex items-start gap-2">
                     <button
-                      onClick={() => onRemoveItem(item.stepId)}
-                      className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
-                      title="Remove"
+                      onClick={() => onSelectStep(item.stepId)}
+                      className="flex-1 text-left"
+                      title="Click to change selection"
                     >
-                      <X className="h-3 w-3" />
+                      <Badge
+                        variant="secondary"
+                        className="mb-1 text-[10px] capitalize"
+                      >
+                        {item.stepLabel}
+                      </Badge>
+                      <p className="line-clamp-2 text-xs font-medium leading-snug">
+                        {item.product.title}
+                      </p>
+                      {/* Vendor attribution */}
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <Store className="h-2.5 w-2.5 text-muted-foreground" />
+                        <span className="text-[10px] text-muted-foreground">
+                          {item.product.vendor || item.product.source}
+                        </span>
+                        {item.product.source === "amazon" && (
+                          <Badge
+                            variant="outline"
+                            className="h-3.5 px-1 text-[8px]"
+                          >
+                            Amazon
+                          </Badge>
+                        )}
+                      </div>
                     </button>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="text-xs font-medium text-aqua">
+                        {formatPrice(item.product.price.amount)}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {/* Per-item external link */}
+                        <a
+                          href={link.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-aqua group-hover:opacity-100"
+                          title={link.external ? "View on Amazon" : "View product"}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                        <button
+                          onClick={() =>
+                            onRemoveItem(item.stepId, item.product.id)
+                          }
+                          className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
+                          title="Remove"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Fish section */}
-        {fishSelections.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <Fish className="h-3.5 w-3.5" />
-              Fish from Calculator
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {fishSelections.map((fish) => (
-                <Badge
-                  key={fish.species}
-                  variant="outline"
-                  className="gap-1 text-[10px]"
-                >
-                  {fish.species}
-                  <span className="rounded-full bg-aqua/20 px-1 text-aqua">
-                    {fish.count}
-                  </span>
-                </Badge>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
 
@@ -194,15 +210,15 @@ export function WizardCartSidebar({
           </div>
         )}
 
-        {/* Open All on Amazon */}
+        {/* Open All Links */}
         {items.length > 0 && (
           <Button
-            onClick={handleOpenAllOnAmazon}
+            onClick={handleOpenAllLinks}
             className="w-full bg-aqua text-deep-blue hover:bg-aqua-dim"
             size="sm"
           >
             <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-            Open All on Amazon
+            Open All Product Links
           </Button>
         )}
 
@@ -219,7 +235,12 @@ export function WizardCartSidebar({
                 onClick={() => {
                   /* Find which step this product belongs to and navigate there */
                   const stepMap: Record<string, string> = {
+                    "Fish & Livestock": "fish",
                     TANK: "tank",
+                    "Live Plants": "plants",
+                    PLANTS: "plants",
+                    Hardscape: "hardscape",
+                    DRIFTWOOD: "hardscape",
                     FILTER: "filter",
                     HEATER: "heater",
                     "UV LIGHT": "light",
@@ -276,4 +297,3 @@ export function WizardCartSidebar({
     </ScrollArea>
   );
 }
-
