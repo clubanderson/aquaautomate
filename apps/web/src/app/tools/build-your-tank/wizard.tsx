@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getWizardRecommendations } from "@/lib/commerce/wizard-recommendations";
+import { isFishProductType, isProductForStep } from "@/lib/commerce/wizard-product-types";
 import type { NormalizedProduct } from "@/lib/commerce/types";
 import {
   WizardCartSidebar,
@@ -49,22 +50,11 @@ const STEPS: { id: WizardStep; label: string }[] = [
   { id: "review", label: "Review" },
 ];
 
-/**
- * Map wizard steps to product types from both Shopify and Amazon catalogs.
- * Shopify types: "Fish & Livestock", "Live Plants", "Hardscape"
- * Amazon types: "TANK", "FILTER", "HEATER", "UV LIGHT", "GRAVEL", "DRIFTWOOD", "PLANTS"
+/*
+ * Product type matching is handled by isProductForStep() from wizard-product-types.ts.
+ * Fish uses exclusion-based matching (future-proof for new species types).
+ * Plants, hardscape, and equipment use case-insensitive explicit type lists.
  */
-const STEP_PRODUCT_TYPES: Record<WizardStep, string[]> = {
-  fish: ["Fish & Livestock"],
-  tank: ["TANK"],
-  plants: ["Live Plants", "PLANTS"],
-  hardscape: ["Hardscape", "DRIFTWOOD"],
-  filter: ["FILTER"],
-  heater: ["HEATER"],
-  light: ["UV LIGHT"],
-  substrate: ["GRAVEL"],
-  review: [],
-};
 
 /** Steps where fish is multi-select (can pick multiple products) */
 const MULTI_SELECT_STEPS = new Set<WizardStep>(["fish"]);
@@ -285,7 +275,7 @@ function matchFishFromParam(
   if (!fishParam) return [];
 
   const fishProducts = allProducts.filter(
-    (p) => (p.productType || "") === "Fish & Livestock" && p.availableForSale !== false,
+    (p) => isFishProductType(p.productType) && p.availableForSale !== false,
   );
 
   const matched: NormalizedProduct[] = [];
@@ -416,11 +406,10 @@ export function TankWizard({ products }: TankWizardProps) {
 
   /** Products for the current step — filter by type, size, availability */
   const stepProducts = useMemo(() => {
-    const types = STEP_PRODUCT_TYPES[step.id] || [];
-    if (types.length === 0) return [];
+    if (step.id === "review") return [];
 
     const filtered = products.filter((p) => {
-      if (!types.includes(p.productType || "")) return false;
+      if (!isProductForStep(p.productType, step.id)) return false;
 
       /* When a minimum gallon size was provided, only show tanks that meet it */
       if (step.id === "tank" && minGallons) {

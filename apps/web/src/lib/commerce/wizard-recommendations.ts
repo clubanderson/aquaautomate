@@ -1,40 +1,6 @@
 import type { NormalizedProduct } from "./types";
 import { WIZARD_RECOMMENDATION_COUNT } from "@/lib/constants";
-
-/** Wizard step identifiers (must match wizard.tsx) */
-type WizardStep =
-  | "fish"
-  | "tank"
-  | "plants"
-  | "hardscape"
-  | "filter"
-  | "heater"
-  | "light"
-  | "substrate";
-
-/** Map wizard steps to product types for recommendation lookup */
-const STEP_PRODUCT_TYPES: Record<WizardStep, string[]> = {
-  fish: ["Fish & Livestock"],
-  tank: ["TANK"],
-  plants: ["Live Plants", "PLANTS"],
-  hardscape: ["Hardscape", "DRIFTWOOD"],
-  filter: ["FILTER"],
-  heater: ["HEATER"],
-  light: ["UV LIGHT"],
-  substrate: ["GRAVEL"],
-};
-
-/** All selectable steps in order */
-const SELECTABLE_STEPS: WizardStep[] = [
-  "fish",
-  "tank",
-  "plants",
-  "hardscape",
-  "filter",
-  "heater",
-  "light",
-  "substrate",
-];
+import { isProductForStep, SELECTABLE_STEPS } from "./wizard-product-types";
 
 /**
  * Get product recommendations for incomplete wizard steps.
@@ -65,12 +31,11 @@ export function getWizardRecommendations(
       if (!Array.isArray(selection)) continue;
     }
 
-    const types = STEP_PRODUCT_TYPES[step];
     /* Find the best product: automation-compatible first, then cheapest */
     const candidate = allProducts
       .filter(
         (p) =>
-          types.includes(p.productType || "") &&
+          isProductForStep(p.productType, step) &&
           p.availableForSale !== false,
       )
       .sort((a, b) => {
