@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAllProducts } from "@/lib/shopify";
 import { normalizeShopifyProduct } from "@/lib/commerce/adapters/shopify";
 import { DEMO_PRODUCTS } from "@/lib/commerce/demo-data";
+import { AMAZON_PRODUCTS } from "@/lib/commerce/amazon-catalog";
 import type { NormalizedProduct } from "@/lib/commerce/types";
 
 /** ISR revalidation — cache the search index for 5 minutes */
@@ -54,6 +55,8 @@ export async function GET() {
     /* Shopify unavailable — use demo data */
   }
 
-  const index = buildIndex(products);
+  /* Merge Amazon affiliate products into the search index */
+  const allProducts = [...products, ...AMAZON_PRODUCTS];
+  const index = buildIndex(allProducts);
   return NextResponse.json(index);
 }

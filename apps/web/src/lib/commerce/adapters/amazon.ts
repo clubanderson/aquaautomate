@@ -17,6 +17,8 @@ export function createAmazonProduct(params: {
   tags?: string[];
   automationCompatible?: boolean;
   waterType?: "freshwater" | "saltwater" | "both";
+  productType?: string;
+  vendor?: string;
 }): NormalizedProduct {
   const affiliateUrl = `https://www.amazon.com/dp/${params.asin}?tag=${AMAZON_ASSOCIATE_TAG}`;
 
@@ -27,6 +29,8 @@ export function createAmazonProduct(params: {
     description: params.description,
     source: "amazon",
     fulfillment: "amazon-affiliate",
+    vendor: params.vendor,
+    productType: params.productType,
     tags: params.tags ?? [],
     images: [
       {
@@ -52,5 +56,7 @@ export function createAmazonProduct(params: {
     sourceLabel: "Available on Amazon",
     automationCompatible: params.automationCompatible,
     waterType: params.waterType,
+    totalQuantity: null,
+    inventoryStatus: "in-stock",
   };
 }
