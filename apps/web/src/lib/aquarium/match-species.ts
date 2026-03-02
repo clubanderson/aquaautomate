@@ -7,7 +7,7 @@ import {
 } from "./compatibility-data";
 
 /** Map Shopify productType values to species profile species names */
-const PRODUCT_TYPE_TO_SPECIES: Record<string, string> = {
+export const PRODUCT_TYPE_TO_SPECIES: Record<string, string> = {
   TETRA: "Neon Tetra",
   MOLLY: "Molly",
   PLATY: "Platy",

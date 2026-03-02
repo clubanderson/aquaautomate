@@ -40,6 +40,9 @@ export const REVALIDATE_SECONDS = 300;
 /** Number of product recommendations to show in the wizard cart sidebar */
 export const WIZARD_RECOMMENDATION_COUNT = 3;
 
+/** Maximum tank mate recommendations shown in the fish type grid */
+export const MAX_TANK_MATE_RECOMMENDATIONS = 6;
+
 /** Navigation links */
 export const NAV_LINKS = [
   { label: "Shop", href: "/collections" },
