@@ -698,25 +698,15 @@ export function TankWizard({ products }: TankWizardProps) {
   const reviewHasShopify = reviewShopifyItems.length > 0;
   const reviewHasAmazon = reviewAmazonItems.length > 0;
 
-  /** Add Shopify items to cart, open Amazon items in new tabs */
+  /** Add Shopify items to cart */
   const handleAddToCart = useCallback(() => {
     for (const item of reviewShopifyItems) {
       addItem(item.product, item.quantity);
     }
-    for (const item of reviewAmazonItems) {
-      if (item.product.externalUrl) {
-        window.open(item.product.externalUrl, "_blank", "noopener,noreferrer");
-      }
-    }
-    const parts: string[] = [];
-    if (reviewShopifyItems.length > 0) {
-      parts.push(`Added ${reviewShopifyItems.length} ${reviewShopifyItems.length === 1 ? "item" : "items"} to cart`);
-    }
-    if (reviewAmazonItems.length > 0) {
-      parts.push(`${reviewAmazonItems.length} Amazon ${reviewAmazonItems.length === 1 ? "item" : "items"} opened`);
-    }
-    setReviewConfirmation(parts.join(" · "));
-  }, [reviewShopifyItems, reviewAmazonItems, addItem]);
+    setReviewConfirmation(
+      `Added ${reviewShopifyItems.length} ${reviewShopifyItems.length === 1 ? "item" : "items"} to cart`,
+    );
+  }, [reviewShopifyItems, addItem]);
 
   /* ── Render ────────────────────────────────────────────────────────── */
 
@@ -788,25 +778,16 @@ export function TankWizard({ products }: TankWizardProps) {
                 </div>
               )}
 
-              {/* Add to Cart — prominent CTA */}
-              {cartItems.length > 0 && (
+              {/* Add to Cart (Shopify items) */}
+              {reviewHasShopify && (
                 <div className="space-y-2">
                   <Button
                     onClick={handleAddToCart}
                     className="w-full bg-aqua text-deep-blue hover:bg-aqua-dim sm:w-auto"
                     size="lg"
                   >
-                    {reviewHasShopify ? (
-                      <>
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        {reviewHasAmazon ? "Add to Cart & Open Amazon" : "Add to Cart"}
-                      </>
-                    ) : (
-                      <>
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Open on Amazon
-                      </>
-                    )}
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    Add to Cart
                   </Button>
                   {reviewConfirmation && (
                     <p className="flex items-center gap-1.5 text-sm text-green-400">
@@ -814,6 +795,42 @@ export function TankWizard({ products }: TankWizardProps) {
                       {reviewConfirmation}
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* Amazon items — individual links */}
+              {reviewHasAmazon && (
+                <div className="rounded-lg border border-border/50 bg-card/30 p-4">
+                  <p className="mb-2 text-sm font-medium text-muted-foreground">
+                    Also buy on Amazon ({reviewAmazonItems.length}{" "}
+                    {reviewAmazonItems.length === 1 ? "item" : "items"})
+                  </p>
+                  <div className="space-y-1.5">
+                    {reviewAmazonItems.map((item) => (
+                      <a
+                        key={`${item.stepId}-${item.product.id}`}
+                        href={item.product.externalUrl || `/products/${item.product.handle}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between rounded-md border border-border/30 bg-card/50 px-3 py-2 text-sm transition-colors hover:border-aqua/30 hover:bg-aqua/5"
+                      >
+                        <span className="line-clamp-1 font-medium">
+                          {item.quantity > 1 && (
+                            <span className="mr-1 text-aqua">{item.quantity}×</span>
+                          )}
+                          {item.product.title}
+                        </span>
+                        <div className="ml-3 flex shrink-0 items-center gap-2">
+                          <span className="text-xs text-aqua">
+                            {item.quantity > 1
+                              ? `$${(Number(item.product.price.amount) * item.quantity).toFixed(2)}`
+                              : `$${Number(item.product.price.amount).toFixed(2)}`}
+                          </span>
+                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
 

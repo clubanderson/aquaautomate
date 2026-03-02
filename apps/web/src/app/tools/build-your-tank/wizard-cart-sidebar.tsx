@@ -103,29 +103,15 @@ export function WizardCartSidebar({
   const hasAmazon = amazonItems.length > 0;
   const hasShopify = shopifyItems.length > 0;
 
-  /** Add Shopify items to cart, open Amazon items in new tabs */
+  /** Add Shopify items to cart */
   const handleAddToCart = useCallback(() => {
-    /* Add Shopify products to the site cart */
     for (const item of shopifyItems) {
       addItem(item.product, item.quantity);
     }
-
-    /* Open Amazon products in new tabs */
-    for (const item of amazonItems) {
-      const link = getProductLink(item.product);
-      window.open(link.href, "_blank", "noopener,noreferrer");
-    }
-
-    /* Build confirmation message */
-    const parts: string[] = [];
-    if (shopifyItems.length > 0) {
-      parts.push(`Added ${shopifyItems.length} ${shopifyItems.length === 1 ? "item" : "items"} to cart`);
-    }
-    if (amazonItems.length > 0) {
-      parts.push(`${amazonItems.length} Amazon ${amazonItems.length === 1 ? "item" : "items"} opened`);
-    }
-    setConfirmation(parts.join(" · "));
-  }, [shopifyItems, amazonItems, addItem]);
+    setConfirmation(
+      `Added ${shopifyItems.length} ${shopifyItems.length === 1 ? "item" : "items"} to cart`,
+    );
+  }, [shopifyItems, addItem]);
 
   return (
     <ScrollArea className="h-full">
@@ -261,25 +247,16 @@ export function WizardCartSidebar({
           </div>
         )}
 
-        {/* Add to Cart / Open Amazon */}
-        {items.length > 0 && (
+        {/* Add to Cart (Shopify items) */}
+        {hasShopify && (
           <div className="space-y-1.5">
             <Button
               onClick={handleAddToCart}
               className="w-full bg-aqua text-deep-blue hover:bg-aqua-dim"
               size="sm"
             >
-              {hasShopify ? (
-                <>
-                  <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
-                  {hasAmazon ? "Add to Cart & Open Amazon" : "Add to Cart"}
-                </>
-              ) : (
-                <>
-                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                  Open on Amazon
-                </>
-              )}
+              <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
+              Add to Cart
             </Button>
             {confirmation && (
               <p className="flex items-center gap-1 text-[10px] text-green-400">
@@ -287,6 +264,35 @@ export function WizardCartSidebar({
                 {confirmation}
               </p>
             )}
+          </div>
+        )}
+
+        {/* Amazon items — individual links (avoids popup blocker) */}
+        {hasAmazon && (
+          <div className="space-y-1.5 border-t border-border/50 pt-3">
+            <p className="text-[10px] font-medium text-muted-foreground">
+              Also buy on Amazon ({amazonItems.length} {amazonItems.length === 1 ? "item" : "items"})
+            </p>
+            {amazonItems.map((item) => {
+              const link = getProductLink(item.product);
+              return (
+                <a
+                  key={`${item.stepId}-${item.product.id}`}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between rounded-md border border-border/30 bg-card/30 px-2.5 py-1.5 text-xs transition-colors hover:border-aqua/30 hover:bg-aqua/5"
+                >
+                  <span className="line-clamp-1 font-medium">
+                    {item.quantity > 1 && (
+                      <span className="mr-1 text-aqua">{item.quantity}×</span>
+                    )}
+                    {item.product.title}
+                  </span>
+                  <ExternalLink className="ml-2 h-3 w-3 shrink-0 text-muted-foreground" />
+                </a>
+              );
+            })}
           </div>
         )}
 
