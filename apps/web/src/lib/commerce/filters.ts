@@ -64,12 +64,19 @@ export function applyFilters(
 ): NormalizedProduct[] {
   let result = [...products];
 
-  /* Category filter — normalize to uppercase to match facet keys */
+  /* Category filter — normalize to uppercase + apply aliases to match facet keys */
   if (filters.categories.length > 0) {
-    const cats = new Set(filters.categories.map((c) => c.toUpperCase()));
-    result = result.filter((p) =>
-      cats.has((p.productType || "").toUpperCase())
+    const cats = new Set(
+      filters.categories.map((c) => {
+        const upper = c.toUpperCase();
+        return PRODUCT_TYPE_ALIASES[upper] || upper;
+      })
     );
+    result = result.filter((p) => {
+      const raw = (p.productType || "").toUpperCase();
+      const type = PRODUCT_TYPE_ALIASES[raw] || raw;
+      return cats.has(type);
+    });
   }
 
   /* Water type filter */
@@ -123,15 +130,22 @@ export function applyFilters(
   return result;
 }
 
+/** Merge synonymous product types into a single canonical key */
+const PRODUCT_TYPE_ALIASES: Record<string, string> = {
+  PLANT: "PLANTS",
+  "LIVE PLANT": "LIVE PLANTS",
+  "LIVE PLANTS": "PLANTS",
+};
+
 /** Extract facet counts from a product list for dynamic filter UI */
 export function extractFacets(products: NormalizedProduct[]) {
   const categories = new Map<string, number>();
   const waterTypes = new Map<string, number>();
 
   for (const p of products) {
-    /* Normalize to uppercase so mixed-case variants (e.g. "Plant" vs "PLANTS")
-       merge into a single facet */
-    const type = (p.productType || "Other").toUpperCase();
+    /* Normalize to uppercase then merge synonyms (e.g. "Plant" → "PLANTS") */
+    const raw = (p.productType || "Other").toUpperCase();
+    const type = PRODUCT_TYPE_ALIASES[raw] || raw;
     categories.set(type, (categories.get(type) || 0) + 1);
 
     if (p.waterType) {
