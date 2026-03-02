@@ -14,7 +14,7 @@ interface CartContextValue {
   items: CartItem[];
   totalQuantity: number;
   subtotal: string;
-  addItem: (product: NormalizedProduct, quantity?: number) => void;
+  addItem: (product: NormalizedProduct, quantity?: number, variantId?: string) => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
@@ -35,13 +35,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
   const addItem = useCallback(
-    (product: NormalizedProduct, quantity: number = 1) => {
+    (product: NormalizedProduct, quantity: number = 1, explicitVariantId?: string) => {
       // Only Shopify products go in cart; Amazon products link out
       if (product.source === "amazon") return;
 
       trackAddToCart(product, quantity);
 
-      const variantId = product.variants[0]?.id ?? product.id;
+      const variantId = explicitVariantId ?? product.variants[0]?.id ?? product.id;
 
       setItems((prev) => {
         const existing = prev.find((item) => item.variantId === variantId);

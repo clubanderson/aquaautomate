@@ -1,6 +1,7 @@
 /** Revalidate product pages every 60 seconds */
 export const revalidate = 60;
 
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,10 +13,11 @@ import { ProductBadges } from "@/components/product-badges";
 import { DEMO_PRODUCTS } from "@/lib/commerce/demo-data";
 import { getProductByHandle, getProducts, getAllProducts } from "@/lib/shopify";
 import { normalizeShopifyProduct } from "@/lib/commerce/adapters/shopify";
-import { isOnSale } from "@/lib/commerce/utils";
 import { SITE_NAME } from "@/lib/constants";
 import type { NormalizedProduct } from "@/lib/commerce/types";
 import { AddToCartButton } from "./add-to-cart-button";
+import { VariantSelector } from "./variant-selector";
+import { VariantPrice } from "./variant-price";
 import { ProductRecommendations } from "@/components/product-recommendations";
 import { TankMates } from "@/components/tank-mates";
 import { ProductReviews } from "@/components/product-reviews";
@@ -88,19 +90,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const product = await findProduct(handle);
   if (!product) notFound();
 
-  const formattedPrice = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: product.price.currencyCode,
-  }).format(Number(product.price.amount));
-
-  const formattedComparePrice =
-    isOnSale(product) && product.compareAtPrice
-      ? new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: product.compareAtPrice.currencyCode,
-        }).format(Number(product.compareAtPrice.amount))
-      : null;
-
   const isSoldOut = product.inventoryStatus === "sold-out";
   const allProducts = await fetchAllProducts();
 
@@ -153,16 +142,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
             <h1 className="text-3xl font-bold">{product.title}</h1>
 
-            <div className="flex items-baseline gap-2">
-              <p className={`text-3xl font-bold ${isSoldOut ? "text-muted-foreground" : "text-aqua"}`}>
-                {formattedPrice}
-              </p>
-              {formattedComparePrice && (
-                <p className="text-xl text-muted-foreground line-through">
-                  {formattedComparePrice}
-                </p>
-              )}
-            </div>
+            <Suspense>
+              <VariantPrice variants={product.variants} isSoldOut={isSoldOut} />
+            </Suspense>
 
             {/* Stock status text */}
             {product.inventoryStatus === "low-stock" && (
@@ -180,27 +162,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <p className="text-muted-foreground">{product.description}</p>
 
           {/* Variants */}
-          {product.variants.length > 1 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">Options</h3>
-              <div className="flex flex-wrap gap-2">
-                {product.variants.map((variant) => (
-                  <Badge
-                    key={variant.id}
-                    variant="outline"
-                    className="cursor-pointer hover:border-aqua/50"
-                  >
-                    {variant.title}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
+          <Suspense>
+            <VariantSelector variants={product.variants} />
+          </Suspense>
 
           {/* Add to Cart + Wishlist */}
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <AddToCartButton product={product} />
+              <Suspense>
+                <AddToCartButton product={product} />
+              </Suspense>
             </div>
             <WishlistButton productId={product.id} className="border border-border/50 rounded-lg p-2.5" />
           </div>
