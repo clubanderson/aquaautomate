@@ -1,15 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { AlertTriangle, Check, ExternalLink, Fish, Info, Minus, Plus, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  ExternalLink,
+  Fish,
+  Info,
+  Minus,
+  Plus,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SPECIES_PROFILES } from "@/lib/aquarium/compatibility-data";
 import { SPECIES_CARE } from "@/lib/aquarium/species-care";
-import { getCompatibility } from "@/lib/aquarium/match-species";
+import { getCompatibility, PRODUCT_TYPE_TO_SPECIES } from "@/lib/aquarium/match-species";
+import {
+  groupFishByType,
+  getTankMateRecommendations,
+} from "@/lib/aquarium/fish-type-groups";
+import { isFishProductType } from "@/lib/commerce/wizard-product-types";
 import { AMAZON_PRODUCTS } from "@/lib/commerce/amazon-catalog";
+import type { NormalizedProduct } from "@/lib/commerce/types";
 import type { Compatibility } from "@/lib/aquarium/tank-mates";
+import {
+  MAX_CALCULATOR_RECOMMENDATIONS,
+  SPECIES_PICKER_THUMB_SIZE,
+} from "@/lib/constants";
 
 /** Standard tank sizes in gallons */
 const STANDARD_TANK_SIZES = [5, 10, 20, 29, 30, 40, 55, 75, 90, 125] as const;
@@ -62,6 +83,9 @@ const TANK_PRODUCTS = AMAZON_PRODUCTS.filter(
   (p) => p.productType === "TANK"
 );
 
+/** Thumbnail size for selected-fish cards */
+const SELECTED_FISH_THUMB_SIZE = 32;
+
 interface SelectedSpecies {
   species: string;
   count: number;
@@ -73,9 +97,72 @@ const COMPAT_COLORS: Record<Compatibility, string> = {
   incompatible: "text-red-400",
 };
 
-export function TankCalculator() {
+const COMPAT_BADGE_COLORS: Record<Compatibility, string> = {
+  compatible: "bg-green-500/10 text-green-400 border-green-500/20",
+  caution: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  incompatible: "bg-red-500/10 text-red-400 border-red-500/20",
+};
+
+interface TankCalculatorProps {
+  products: NormalizedProduct[];
+}
+
+/**
+ * Build a map from species name → matching products with price info.
+ * Reverse-lookups PRODUCT_TYPE_TO_SPECIES so each species name maps
+ * to all products with a matching productType.
+ */
+function buildSpeciesProductMap(
+  fishProducts: NormalizedProduct[],
+): Record<string, NormalizedProduct[]> {
+  /* Invert the type→species map to species→types */
+  const speciesToTypes = new Map<string, string[]>();
+  for (const [type, species] of Object.entries(PRODUCT_TYPE_TO_SPECIES)) {
+    const arr = speciesToTypes.get(species) || [];
+    arr.push(type);
+    speciesToTypes.set(species, arr);
+  }
+
+  const map: Record<string, NormalizedProduct[]> = {};
+  for (const product of fishProducts) {
+    const pType = (product.productType || "").toUpperCase();
+    const species = PRODUCT_TYPE_TO_SPECIES[pType];
+    if (!species) continue;
+    const arr = map[species] || [];
+    arr.push(product);
+    map[species] = arr;
+  }
+  return map;
+}
+
+/** Compute price range string from a list of products */
+function getPriceRange(products: NormalizedProduct[]): string {
+  const prices = products
+    .map((p) => Number(p.price.amount))
+    .filter((n) => !Number.isNaN(n) && n > 0)
+    .sort((a, b) => a - b);
+  if (prices.length === 0) return "";
+  if (prices.length === 1 || prices[0] === prices[prices.length - 1]) {
+    return `$${prices[0].toFixed(2)}`;
+  }
+  return `$${prices[0].toFixed(2)} – $${prices[prices.length - 1].toFixed(2)}`;
+}
+
+
+export function TankCalculator({ products }: TankCalculatorProps) {
   const [selected, setSelected] = useState<SelectedSpecies[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+
+  /* Compute fish products and species→product map once */
+  const fishProducts = useMemo(
+    () => products.filter((p) => isFishProductType(p.productType)),
+    [products],
+  );
+
+  const speciesProductMap = useMemo(
+    () => buildSpeciesProductMap(fishProducts),
+    [fishProducts],
+  );
 
   const addSpecies = (species: string) => {
     if (selected.some((s) => s.species === species)) return;
@@ -154,6 +241,50 @@ export function TankCalculator() {
     }
   }
 
+  /* Tank mate recommendations — build from product catalog */
+  const recommendations = useMemo(() => {
+    if (selected.length === 0) return [];
+
+    /* Build fake "selectedFish" products for the recommendations engine */
+    const selectedFishProducts: NormalizedProduct[] = [];
+    for (const s of selected) {
+      const prods = speciesProductMap[s.species];
+      if (prods && prods.length > 0) {
+        selectedFishProducts.push(prods[0]);
+      }
+    }
+
+    const allGroups = groupFishByType(fishProducts, selectedFishProducts);
+    const recs = getTankMateRecommendations(selectedFishProducts, allGroups);
+    return recs.slice(0, MAX_CALCULATOR_RECOMMENDATIONS);
+  }, [selected, fishProducts, speciesProductMap]);
+
+  /* Estimated cost calculation */
+  const estimatedCost = useMemo(() => {
+    let minTotal = 0;
+    let maxTotal = 0;
+    let hasPrice = false;
+
+    for (const s of selected) {
+      const prods = speciesProductMap[s.species] || [];
+      if (prods.length === 0) continue;
+
+      const prices = prods
+        .map((p) => Number(p.price.amount))
+        .filter((n) => !Number.isNaN(n) && n > 0)
+        .sort((a, b) => a - b);
+
+      if (prices.length === 0) continue;
+      hasPrice = true;
+      minTotal += prices[0] * s.count;
+      maxTotal += prices[prices.length - 1] * s.count;
+    }
+
+    if (!hasPrice) return null;
+    if (minTotal === maxTotal) return `$${minTotal.toFixed(2)}`;
+    return `$${minTotal.toFixed(2)} – $${maxTotal.toFixed(2)}`;
+  }, [selected, speciesProductMap]);
+
   /* Filter species list — exclude already-selected and incompatible temperaments */
   const filteredSpecies = SPECIES_PROFILES.filter((p) => {
     /* Already selected */
@@ -208,15 +339,43 @@ export function TankCalculator() {
           </div>
         )}
         <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto">
-          {filteredSpecies.map((sp) => (
-            <button
-              key={sp.species}
-              onClick={() => addSpecies(sp.species)}
-              className="rounded-md border border-border/50 bg-card/30 px-2.5 py-1 text-xs transition-colors hover:border-aqua/50 hover:text-aqua"
-            >
-              {sp.species}
-            </button>
-          ))}
+          {filteredSpecies.map((sp) => {
+            const prods = speciesProductMap[sp.species] || [];
+            const thumb = prods[0]?.featuredImage?.url;
+            const priceRange = prods.length > 0 ? getPriceRange(prods) : "";
+
+            return (
+              <button
+                key={sp.species}
+                onClick={() => addSpecies(sp.species)}
+                className="flex items-center gap-1.5 rounded-md border border-border/50 bg-card/30 px-2.5 py-1 text-xs transition-colors hover:border-aqua/50 hover:text-aqua"
+              >
+                {thumb ? (
+                  <Image
+                    src={thumb}
+                    alt={sp.species}
+                    width={SPECIES_PICKER_THUMB_SIZE}
+                    height={SPECIES_PICKER_THUMB_SIZE}
+                    className="rounded-sm object-cover"
+                    style={{
+                      width: SPECIES_PICKER_THUMB_SIZE,
+                      height: SPECIES_PICKER_THUMB_SIZE,
+                    }}
+                  />
+                ) : (
+                  <Fish className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
+                <span className="flex flex-col items-start leading-tight">
+                  <span>{sp.species}</span>
+                  {priceRange && (
+                    <span className="text-[10px] text-muted-foreground">
+                      {priceRange}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -230,12 +389,30 @@ export function TankCalculator() {
                 (p) => p.species === s.species
               );
               const care = SPECIES_CARE[s.species];
+              const prods = speciesProductMap[s.species] || [];
+              const thumb = prods[0]?.featuredImage?.url;
+              const priceRange = prods.length > 0 ? getPriceRange(prods) : "";
+
               return (
                 <div
                   key={s.species}
                   className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/30 p-3"
                 >
-                  <Fish className="h-4 w-4 shrink-0 text-aqua" />
+                  {thumb ? (
+                    <Image
+                      src={thumb}
+                      alt={s.species}
+                      width={SELECTED_FISH_THUMB_SIZE}
+                      height={SELECTED_FISH_THUMB_SIZE}
+                      className="shrink-0 rounded-sm object-cover"
+                      style={{
+                        width: SELECTED_FISH_THUMB_SIZE,
+                        height: SELECTED_FISH_THUMB_SIZE,
+                      }}
+                    />
+                  ) : (
+                    <Fish className="h-4 w-4 shrink-0 text-aqua" />
+                  )}
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       {care ? (
@@ -259,6 +436,17 @@ export function TankCalculator() {
                       {profile?.waterParams.tempMinF}&ndash;
                       {profile?.waterParams.tempMaxF}&deg;F
                     </p>
+                    {(priceRange || prods.length > 1) && (
+                      <p className="text-[10px] text-muted-foreground">
+                        {priceRange && <span>{priceRange}</span>}
+                        {prods.length > 1 && (
+                          <span>
+                            {priceRange ? " · " : ""}
+                            {prods.length} varieties available
+                          </span>
+                        )}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <button
@@ -378,6 +566,85 @@ export function TankCalculator() {
             )}
           </div>
 
+          {/* Tank Mate Recommendations */}
+          {recommendations.length > 0 && (
+            <div className="rounded-lg border border-border/50 bg-card/50 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-aqua" />
+                <h2 className="text-lg font-semibold">
+                  Tank Mate Recommendations
+                </h2>
+              </div>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Compatible species that would work well with your selection.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {recommendations.map((rec) => {
+                  /* Find products for the recommended species */
+                  const speciesName = rec.profile.species;
+                  const recProducts = speciesProductMap[speciesName] || [];
+                  const thumb = recProducts[0]?.featuredImage?.url;
+                  const priceRange = recProducts.length > 0 ? getPriceRange(recProducts) : "";
+                  const alreadySelected = selected.some(
+                    (s) => s.species === speciesName,
+                  );
+
+                  return (
+                    <div
+                      key={rec.productType}
+                      className="flex items-start gap-3 rounded-lg border border-border/50 bg-card/30 p-3"
+                    >
+                      {thumb ? (
+                        <Image
+                          src={thumb}
+                          alt={speciesName}
+                          width={SELECTED_FISH_THUMB_SIZE}
+                          height={SELECTED_FISH_THUMB_SIZE}
+                          className="mt-0.5 shrink-0 rounded-sm object-cover"
+                          style={{
+                            width: SELECTED_FISH_THUMB_SIZE,
+                            height: SELECTED_FISH_THUMB_SIZE,
+                          }}
+                        />
+                      ) : (
+                        <Fish className="mt-0.5 h-5 w-5 shrink-0 text-aqua" />
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">
+                            {rec.displayName}
+                          </span>
+                          <span
+                            className={`rounded-full border px-1.5 py-0.5 text-[10px] ${COMPAT_BADGE_COLORS[rec.compatibility]}`}
+                          >
+                            {rec.compatibility === "compatible"
+                              ? "Compatible"
+                              : "Caution"}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          {rec.reason}
+                        </p>
+                        {priceRange && (
+                          <p className="text-[10px] text-muted-foreground">
+                            {priceRange}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => addSpecies(speciesName)}
+                        disabled={alreadySelected}
+                        className="shrink-0 rounded-md border border-aqua/30 px-2 py-1 text-xs text-aqua transition-colors hover:bg-aqua/10 disabled:cursor-default disabled:opacity-40"
+                      >
+                        {alreadySelected ? "Added" : "Add"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Summary */}
           <div className="rounded-lg border border-border/50 bg-card/50 p-4">
             <h2 className="mb-3 text-lg font-semibold">Stocking Summary</h2>
@@ -406,6 +673,14 @@ export function TankCalculator() {
                   {recommendedSize}+ gallons
                 </span>
               </p>
+              {estimatedCost && (
+                <p className="text-muted-foreground">
+                  Estimated fish cost:{" "}
+                  <span className="font-medium text-foreground">
+                    {estimatedCost}
+                  </span>
+                </p>
+              )}
             </div>
           </div>
 
