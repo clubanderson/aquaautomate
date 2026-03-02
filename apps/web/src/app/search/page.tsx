@@ -2,7 +2,9 @@
 export const revalidate = 60;
 
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { ProductGrid } from "@/components/product-grid";
+import { SearchInput } from "@/components/search/search-input";
 import { getAllProducts } from "@/lib/shopify";
 import { normalizeShopifyProduct } from "@/lib/commerce/adapters/shopify";
 import { DEMO_PRODUCTS } from "@/lib/commerce/demo-data";
@@ -75,6 +77,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             ? `${filtered.length} product${filtered.length === 1 ? "" : "s"} found`
             : "Enter a search term to find products."}
         </p>
+        <Suspense>
+          <SearchInput initialQuery={query} />
+        </Suspense>
       </div>
 
       {query && <ProductGrid products={filtered} />}
