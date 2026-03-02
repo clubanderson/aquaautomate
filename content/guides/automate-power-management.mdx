@@ -1,0 +1,206 @@
+---
+title: "Smart Power Management for Your Aquarium"
+slug: "automate-power-management"
+description: "Control every device with Tuya smart strips and Shelly plugs. Monitor energy usage, detect power failures, and automate recovery — all through Home Assistant."
+category: "automation"
+difficulty: "easy"
+author: "AquaAutomate"
+date: "2026-03-01"
+tags: ["power", "shelly", "tuya", "energy", "monitoring", "home-assistant"]
+image: "/images/guides/power-management.jpg"
+---
+
+# Smart Power Management for Your Aquarium
+
+Every aquarium device — lights, heaters, pumps, filters, feeders — plugs into power. Smart plugs and power strips let you control each one individually, monitor energy consumption, detect failures, and automate power recovery after outages.
+
+## What You'll Need
+
+- **Tuya WiFi Smart Power Strip** — 4 individually controllable AC outlets + USB ports
+- **Shelly Plus Plug S** — for high-draw devices (heaters, canister filters) with power monitoring
+- **Shelly Plus 1PM Mini** — for hardwired/in-line equipment (optional)
+- **Home Assistant** — already set up ([see getting started guide](/guides/ha-getting-started))
+
+## Which Plug for What?
+
+| Device | Recommended Plug | Why |
+|---|---|---|
+| Aquarium light | Tuya strip outlet | Low wattage, schedule control |
+| Heater (100-300W) | Shelly Plus Plug S | Power monitoring detects heater cycling |
+| Canister filter | Shelly Plus Plug S | Monitor for jams (power spike) |
+| Air pump | Tuya strip outlet | Low wattage, schedule control |
+| Auto feeder | Tuya strip outlet | Brief on/off cycles |
+| Dosing pump | Shelly Plus 1PM Mini | Hardwired, needs relay control |
+| UV sterilizer | Tuya strip outlet | On/off schedule |
+
+## Step 1: Tuya Smart Power Strip Setup
+
+The Tuya power strip gives you 4 independently switchable outlets from one unit:
+
+1. Plug the strip into a GFCI-protected outlet (critical for aquariums)
+2. Add to the Tuya/Smart Life app
+3. Home Assistant discovers it via the Tuya integration
+
+```yaml
+# Entities from a 4-outlet Tuya power strip
+switch.tuya_strip_outlet_1    # → Aquarium light
+switch.tuya_strip_outlet_2    # → Air pump
+switch.tuya_strip_outlet_3    # → Auto feeder
+switch.tuya_strip_outlet_4    # → UV sterilizer
+switch.tuya_strip_usb         # → USB devices (LED strip, etc.)
+```
+
+## Step 2: Shelly Plug Setup for High-Draw Devices
+
+Shelly plugs work locally — no cloud required — and provide real-time power monitoring:
+
+1. Plug the Shelly Plus Plug S into a GFCI outlet
+2. Connect to the Shelly's WiFi AP to configure
+3. Set your home WiFi credentials
+4. Home Assistant auto-discovers it via the Shelly integration
+
+```yaml
+# Entities from a Shelly Plus Plug S
+switch.shelly_plug_heater           # On/off control
+sensor.shelly_plug_heater_power     # Current wattage (W)
+sensor.shelly_plug_heater_energy    # Cumulative energy (kWh)
+sensor.shelly_plug_heater_voltage   # Line voltage (V)
+sensor.shelly_plug_heater_current   # Current draw (A)
+```
+
+## Step 3: Energy Monitoring Dashboard
+
+Track how much each device costs to run:
+
+```yaml
+type: vertical-stack
+title: "Energy Monitor"
+cards:
+  - type: entities
+    entities:
+      - entity: sensor.shelly_plug_heater_power
+        name: "Heater"
+        icon: mdi:fire
+      - entity: sensor.shelly_plug_filter_power
+        name: "Canister Filter"
+        icon: mdi:water-pump
+      - entity: sensor.shelly_plug_heater_energy
+        name: "Heater (Total kWh)"
+        icon: mdi:flash
+  - type: history-graph
+    entities:
+      - entity: sensor.shelly_plug_heater_power
+        name: "Heater Watts"
+      - entity: sensor.shelly_plug_filter_power
+        name: "Filter Watts"
+    hours_to_show: 24
+```
+
+## Step 4: Power Failure Detection
+
+Detect when a plug goes offline (internet or power outage):
+
+```yaml
+automation:
+  - alias: "Power Failure Alert"
+    description: "Notify when any aquarium smart plug becomes unavailable"
+    trigger:
+      - platform: state
+        entity_id:
+          - switch.shelly_plug_heater
+          - switch.tuya_strip_outlet_1
+          - switch.tuya_canister_filter
+        to: "unavailable"
+        for:
+          minutes: 2
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Aquarium Power Alert"
+          message: "{{ trigger.to_state.name }} is offline! Check power and network."
+          data:
+            priority: high
+```
+
+## Step 5: Auto-Recovery After Power Outage
+
+After a power outage, smart plugs may come back in the wrong state. This automation ensures critical devices turn back on:
+
+```yaml
+automation:
+  - alias: "Post-Outage Recovery"
+    description: "Ensure heater and filter are ON after power restoration"
+    trigger:
+      - platform: state
+        entity_id: switch.shelly_plug_heater
+        from: "unavailable"
+        to: "off"
+    action:
+      - delay:
+          seconds: 30
+      - service: switch.turn_on
+        target:
+          entity_id:
+            - switch.shelly_plug_heater
+            - switch.tuya_canister_filter
+            - switch.tuya_air_pump
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Power Restored"
+          message: "Aquarium devices back online. Heater, filter, and air pump turned ON."
+```
+
+## Step 6: Heater Failure Detection
+
+A Shelly plug monitoring the heater can detect failure by watching power draw:
+
+```yaml
+automation:
+  - alias: "Heater Not Cycling Alert"
+    description: "Alert if heater draws 0W for too long (possible failure)"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.shelly_plug_heater_power
+        below: 1
+        for:
+          hours: 3
+    condition:
+      - condition: state
+        entity_id: switch.shelly_plug_heater
+        state: "on"
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Heater Check"
+          message: "Heater hasn't drawn power in 3 hours while plugged in. It may have failed or the room is very warm."
+```
+
+## Step 7: GFCI Protection
+
+**Critical safety note:** All aquarium electrical equipment should plug into a GFCI (Ground Fault Circuit Interrupter) outlet. This protects you from shock if water contacts electrical components.
+
+- Most bathrooms and kitchens already have GFCI outlets
+- For other locations, use a GFCI power strip or have an electrician add a GFCI breaker
+- Smart plugs go **after** the GFCI, not before
+- Test GFCI outlets monthly with the test/reset buttons
+
+## My Setup
+
+I use one Tuya 4-outlet smart strip per tank for low-draw devices (light, air pump, feeder, UV sterilizer). The heater and canister filter each get their own Shelly Plus Plug S for power monitoring. The Shelly energy data goes into a Home Assistant history graph — I can see exactly when the heater cycles and how much power it uses per day.
+
+My 75-gallon tank draws about 200W at peak (heater + filter + light + air pump) and about $12/month in electricity. The Shelly energy sensors let me track this precisely.
+
+The power failure detection has alerted me twice — once during a real power outage and once when my GFCI tripped from a splash.
+
+## Tips
+
+- **Don't overload a single circuit** — multiple tanks with heaters can approach 15A circuit limits
+- **Label your smart plug entities** clearly in HA — "Shelly Heater 75gal" not "Shelly Plug 1"
+- **Set Shelly plugs to "always on" after power restore** — in the Shelly web UI, set the power-on state to "ON" for critical devices
+- **Keep a battery backup air pump** (Hygger USB) for extended outages
+
+## What's Next?
+
+- [Temperature Monitoring](/guides/automate-temperature) — heater control + alerts
+- [Scene Control with Lutron Pico](/guides/automate-scenes) — one-button power modes
+- [Build Your Dashboard](/guides/automate-dashboard) — the complete aquarium dashboard

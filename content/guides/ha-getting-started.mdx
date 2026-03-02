@@ -1,0 +1,197 @@
+---
+title: "Setting Up Home Assistant for Aquarium Automation"
+slug: "ha-getting-started"
+description: "Install Home Assistant, add Tuya/Shelly/Lutron integrations, and create your first aquarium automation — from zero to smart tank."
+category: "automation"
+difficulty: "easy"
+author: "AquaAutomate"
+date: "2026-03-01"
+tags: ["home-assistant", "setup", "tuya", "shelly", "lutron", "beginner"]
+image: "/images/guides/ha-setup.jpg"
+---
+
+# Setting Up Home Assistant for Aquarium Automation
+
+Home Assistant is the brain behind every automation on this site. It's free, open-source, and runs locally — no cloud required. This guide walks you through installation, adding your first smart devices, and connecting everything for aquarium control.
+
+## Why Home Assistant?
+
+1. **100% local control** — your automations work even when the internet goes down
+2. **One app for everything** — Tuya plugs, Shelly relays, Lutron remotes, and hundreds more
+3. **Free and open-source** — no subscriptions, no vendor lock-in
+4. **Perfect for aquariums** — sunrise/sunset triggers, temperature alerts, scheduled dosing
+
+## Step 1: Install Home Assistant
+
+Home Assistant runs on almost anything. Pick your method:
+
+| Method | Best For | Difficulty |
+|---|---|---|
+| **Raspberry Pi 4/5** | Beginners, dedicated hardware | Easy |
+| **Proxmox LXC** | Homelab users with existing server | Intermediate |
+| **Docker** | Developers, existing Linux server | Intermediate |
+| **Virtual Machine** | Windows/Mac users with spare resources | Easy |
+
+### Raspberry Pi (Recommended for Beginners)
+
+1. Download the Home Assistant OS image from [home-assistant.io](https://www.home-assistant.io/installation/raspberrypi)
+2. Flash it to a microSD card with [Balena Etcher](https://etcher.balena.io)
+3. Insert the card, plug in Ethernet and power
+4. Wait 10 minutes, then navigate to `http://homeassistant.local:8123`
+
+### Proxmox LXC (My Setup)
+
+I run Home Assistant in a Proxmox LXC container. This gives you:
+- Snapshots before upgrades (roll back if something breaks)
+- Resource isolation from other services
+- Hardware passthrough for Zigbee/Z-Wave sticks
+
+Use the [community helper script](https://community-scripts.github.io/ProxmoxVE/) to create the LXC:
+
+```yaml
+# Proxmox LXC settings I use
+cores: 2
+memory: 2048
+swap: 512
+disk: 16GB
+network: bridge=vmbr0, static IP recommended
+```
+
+## Step 2: Initial Configuration
+
+On first launch, Home Assistant walks you through:
+
+1. **Create your admin account** — pick a strong password
+2. **Set your location** — this enables sunrise/sunset triggers (critical for lighting automations)
+3. **Set your timezone** — affects all time-based automations
+4. **Name your home** — cosmetic, but helps organize multi-location setups
+
+## Step 3: Add the Tuya Integration
+
+Most aquarium smart plugs and controllers use the Tuya platform (Smart Life, Tuya Smart, etc.).
+
+1. Go to **Settings → Devices & Services → Add Integration**
+2. Search for **Tuya**
+3. Log in with your Tuya/Smart Life account credentials
+4. Authorize Home Assistant to access your devices
+
+Your Tuya smart plugs, power strips, and Inkbird controllers will appear as entities.
+
+```yaml
+# Example: Tuya smart plug entity in Home Assistant
+# Entity ID: switch.tuya_aquarium_light
+# Friendly name: Aquarium Light
+# State: on/off
+# Attributes: current_consumption (watts), voltage
+```
+
+### Going Local with Tuya-Local (Optional, Advanced)
+
+For cloud-free control, flash your Tuya devices with local firmware:
+
+1. Use [tuya-local](https://github.com/make-all/tuya-local) for over-the-air local control
+2. Or flash with [ESPHome](https://esphome.io/) for full local control (requires disassembly)
+
+## Step 4: Add the Shelly Integration
+
+Shelly devices work locally out of the box — no cloud account needed.
+
+1. Go to **Settings → Devices & Services → Add Integration**
+2. Search for **Shelly**
+3. Home Assistant auto-discovers Shelly devices on your network
+4. Click **Configure** for each discovered device
+
+Shelly plugs give you real-time power monitoring — perfect for tracking heater and pump energy usage.
+
+```yaml
+# Example: Shelly Plus Plug S entity
+# Entity ID: switch.shelly_plug_heater
+# Power sensor: sensor.shelly_plug_heater_power
+# Energy sensor: sensor.shelly_plug_heater_energy
+```
+
+## Step 5: Add the Lutron Caseta Integration
+
+Lutron Pico remotes are the best physical buttons for aquarium scene control.
+
+1. You need a **Lutron Caseta Smart Bridge** (not the basic bridge)
+2. Go to **Settings → Devices & Services → Add Integration**
+3. Search for **Lutron Caseta**
+4. Press the pairing button on the bridge when prompted
+5. Home Assistant discovers all paired Pico remotes
+
+Each button press on a Pico remote fires an event in Home Assistant — you can map these to any automation.
+
+```yaml
+# Pico remote button events
+# Button 1 (top): button_0 → Day Mode
+# Button 2: button_2 → Night Mode
+# Button 3 (center): button_3 → Feeding Mode
+# Button 4: button_4 → Movie Mode
+# Button 5 (bottom): button_5 → Maintenance Mode
+```
+
+## Step 6: Create Your First Automation
+
+Let's start simple — turn the aquarium light on at sunrise and off at sunset.
+
+```yaml
+# automations.yaml
+automation:
+  - alias: "Tank Light On — Sunrise"
+    description: "Turn on aquarium light 30 min after sunrise"
+    trigger:
+      - platform: sun
+        event: sunrise
+        offset: "00:30:00"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_aquarium_light
+
+  - alias: "Tank Light Off — Sunset"
+    description: "Turn off aquarium light at sunset"
+    trigger:
+      - platform: sun
+        event: sunset
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_aquarium_light
+```
+
+Paste this into your `automations.yaml`, restart Home Assistant, and your light follows the sun.
+
+## Step 7: Set Up Your Dashboard
+
+Add a basic aquarium card to your Lovelace dashboard:
+
+```yaml
+type: entities
+title: "Aquarium Control"
+entities:
+  - entity: switch.tuya_aquarium_light
+    name: "Tank Light"
+    icon: "mdi:lightbulb"
+  - entity: switch.shelly_plug_heater
+    name: "Heater"
+    icon: "mdi:fire"
+  - entity: switch.tuya_air_pump
+    name: "Air Pump"
+    icon: "mdi:air-filter"
+  - entity: sensor.inkbird_temperature
+    name: "Water Temp"
+    icon: "mdi:thermometer"
+```
+
+## What's Next?
+
+Now that Home Assistant is running, dive into the specific automation guides:
+
+- [Automate Tank Lighting](/guides/automate-tank-lighting) — sunrise/sunset schedules + feeding mode
+- [Temperature Monitoring](/guides/automate-temperature) — Inkbird setup + alerts
+- [Automated Feeding](/guides/automate-feeding) — scheduled feeders + vacation mode
+- [Scene Control with Lutron Pico](/guides/automate-scenes) — one-button day/night/feeding modes
+- [Smart Power Management](/guides/automate-power-management) — energy monitoring + failure detection
+- [Automated Water Changes](/guides/automate-water-changes) — AWC systems + PEX plumbing
+- [Build Your Dashboard](/guides/automate-dashboard) — the complete Lovelace aquarium dashboard

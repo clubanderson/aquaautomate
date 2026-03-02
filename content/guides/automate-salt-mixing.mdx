@@ -1,0 +1,253 @@
+---
+title: "Automated Salt Mixing Station for Saltwater Tanks"
+slug: "automate-salt-mixing"
+description: "Build a Home Assistant-controlled salt mixing station with automated mixing schedules, temperature matching, and dosing pump control."
+category: "automation"
+difficulty: "advanced"
+author: "AquaAutomate"
+date: "2026-03-01"
+tags: ["saltwater", "salt-mixing", "reef", "dosing", "home-assistant", "automation"]
+image: "/images/guides/salt-mixing.jpg"
+---
+
+# Automated Salt Mixing Station for Saltwater Tanks
+
+Saltwater aquariums need consistent salinity. A mixing station pre-mixes salt water to the right concentration and temperature before it enters the tank. Home Assistant automates the mixing schedule, matches temperature, and controls dosing pumps — so your water changes are always consistent.
+
+## What You'll Need
+
+- **Mixing container** — food-safe bucket or Brute trash can (20-50 gallons)
+- **Powerhead/circulation pump** — mixes salt into the water
+- **Submersible heater** — temperature-matches the new water to the tank
+- **Dosing pump** (Kamoer peristaltic) — pumps mixed water to the tank
+- **Salt mix** (Instant Ocean or Reef Crystals)
+- **Refractometer** — measures salinity (manual check)
+- **Tuya smart plugs** — control the powerhead, heater, and dosing pump
+- **Inkbird temperature controller** — matches reservoir temp to tank temp
+- **Home Assistant** — orchestrates everything
+
+## System Architecture
+
+```yaml
+# Salt Mixing Station Layout
+#
+# [Mixing Container]
+#   ├── Powerhead (Tuya plug) → Circulation/mixing
+#   ├── Heater (Inkbird) → Temperature matching
+#   └── Dosing Pump (Tuya plug) → Delivers to tank
+#
+# [Home Assistant]
+#   ├── Schedule: Start mixing 24h before water change
+#   ├── Monitor: Temperature matching (Inkbird sensor)
+#   └── Execute: Pump mixed water to tank when ready
+```
+
+## Step 1: Physical Setup
+
+1. Place the mixing container near the tank (closet, cabinet, or utility area)
+2. Fill with RO/DI or dechlorinated fresh water
+3. Add salt mix per manufacturer instructions (typically 1/2 cup per gallon for 1.025 SG)
+4. Drop in the powerhead — it circulates and dissolves the salt
+5. Add the submersible heater — set to match your tank temperature
+6. Connect the dosing pump output to PEX tubing running to the tank
+
+## Step 2: Smart Plug Configuration
+
+```yaml
+# Entity IDs for the mixing station
+switch.tuya_salt_powerhead      # Circulation pump
+switch.tuya_salt_heater         # Or Inkbird-controlled heater
+switch.tuya_salt_dosing_pump    # Delivers water to tank
+sensor.inkbird_salt_temperature # Reservoir water temp
+sensor.inkbird_tank_temperature # Tank water temp (for matching)
+```
+
+## Step 3: Automated Mixing Schedule
+
+Start mixing 24 hours before your scheduled water change to allow full dissolution and temperature matching:
+
+```yaml
+automation:
+  - alias: "Salt Mix — Start Mixing"
+    description: "Start powerhead and heater 24 hours before water change"
+    trigger:
+      - platform: time
+        at: "02:00:00"
+    condition:
+      - condition: time
+        weekday:
+          - sat
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id:
+            - switch.tuya_salt_powerhead
+            - switch.tuya_salt_heater
+      - service: notify.mobile_app_your_phone
+        data:
+          message: "Salt mixing started. Will be ready for Sunday AWC."
+
+  - alias: "Salt Mix — Ready Notification"
+    description: "Notify when reservoir temp matches tank temp (ready to use)"
+    trigger:
+      - platform: template
+        value_template: >
+          {{ (states('sensor.inkbird_salt_temperature') | float -
+              states('sensor.inkbird_tank_temperature') | float) | abs < 1 }}
+    condition:
+      - condition: state
+        entity_id: switch.tuya_salt_powerhead
+        state: "on"
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Salt Water Ready"
+          message: "Reservoir is {{ states('sensor.inkbird_salt_temperature') }}°F — within 1°F of tank. Ready for water change. Check salinity with refractometer."
+```
+
+## Step 4: Integration with AWC
+
+After the salt water is mixed and temp-matched, integrate with your [AWC automation](/guides/automate-water-changes):
+
+```yaml
+automation:
+  - alias: "Saltwater AWC — Full Cycle"
+    description: "Drain old water, pump in mixed salt water, shut down station"
+    trigger:
+      - platform: time
+        at: "02:00:00"
+    condition:
+      - condition: time
+        weekday:
+          - sun
+      # Only run if mixing station has been running (water is ready)
+      - condition: state
+        entity_id: switch.tuya_salt_powerhead
+        state: "on"
+    action:
+      # Phase 1: Drain
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_awc_drain_pump
+      - delay:
+          minutes: 15
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_awc_drain_pump
+      - delay:
+          seconds: 30
+      # Phase 2: Fill with mixed salt water
+      - service: switch.turn_on
+        target:
+          entity_id: switch.tuya_salt_dosing_pump
+      - delay:
+          minutes: 15
+      - service: switch.turn_off
+        target:
+          entity_id: switch.tuya_salt_dosing_pump
+      # Phase 3: Shut down mixing station
+      - service: switch.turn_off
+        target:
+          entity_id:
+            - switch.tuya_salt_powerhead
+            - switch.tuya_salt_heater
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Saltwater AWC Complete"
+          message: "Water change done. Mixing station shut down. Refill reservoir when convenient."
+```
+
+## Step 5: Salinity Monitoring
+
+Currently, salinity requires a manual refractometer reading. Log it in Home Assistant with an input number:
+
+```yaml
+input_number:
+  salt_tank_salinity:
+    name: "Tank Salinity (SG)"
+    min: 1.000
+    max: 1.040
+    step: 0.001
+    unit_of_measurement: "SG"
+    icon: mdi:water-percent
+
+  salt_reservoir_salinity:
+    name: "Reservoir Salinity (SG)"
+    min: 1.000
+    max: 1.040
+    step: 0.001
+    unit_of_measurement: "SG"
+    icon: mdi:water-percent
+```
+
+Add a salinity alert if it drifts:
+
+```yaml
+automation:
+  - alias: "Salinity Drift Alert"
+    description: "Alert if tank salinity is outside 1.024-1.026 range"
+    trigger:
+      - platform: numeric_state
+        entity_id: input_number.salt_tank_salinity
+        above: 1.026
+      - platform: numeric_state
+        entity_id: input_number.salt_tank_salinity
+        below: 1.024
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Salinity Alert"
+          message: "Tank salinity is {{ states('input_number.salt_tank_salinity') }} SG — outside safe range (1.024-1.026)"
+```
+
+## Step 6: Dashboard Card
+
+```yaml
+type: vertical-stack
+title: "Salt Mixing Station"
+cards:
+  - type: entities
+    entities:
+      - entity: switch.tuya_salt_powerhead
+        name: "Powerhead"
+        icon: mdi:fan
+      - entity: switch.tuya_salt_heater
+        name: "Heater"
+        icon: mdi:fire
+      - entity: sensor.inkbird_salt_temperature
+        name: "Reservoir Temp"
+        icon: mdi:thermometer
+      - entity: input_number.salt_reservoir_salinity
+        name: "Reservoir Salinity"
+      - entity: input_number.salt_tank_salinity
+        name: "Tank Salinity"
+  - type: gauge
+    entity: input_number.salt_tank_salinity
+    name: "Tank Salinity"
+    min: 1.020
+    max: 1.030
+    severity:
+      green: 1.024
+      yellow: 1.022
+      red: 1.020
+```
+
+## My Setup
+
+I use a 32-gallon Brute trash can in a closet as my mixing reservoir. A small powerhead mixes the salt, and an Inkbird-controlled heater matches the temperature to the tank. Saturday morning the mixing station turns on; Sunday at 2 AM the AWC cycle runs. After the water change, the mixing station shuts itself off.
+
+I manually check salinity with a refractometer before each water change and log it in the HA dashboard. One day I'll add an inline salinity sensor, but the manual check takes 30 seconds and keeps me engaged with the tank.
+
+## Tips
+
+- **Mix for at least 24 hours** — gives salt time to fully dissolve and stabilize
+- **Temperature match within 1°F** — sudden temp changes stress corals and fish
+- **Use RO/DI water** for mixing — tap water introduces phosphates and silicates
+- **Keep the container covered** — prevents evaporation and contamination
+- **Refill the reservoir right after a water change** while you remember
+
+## What's Next?
+
+- [Automated Water Changes](/guides/automate-water-changes) — the full AWC system guide
+- [Temperature Monitoring](/guides/automate-temperature) — Inkbird setup + alerts
+- [Build Your Dashboard](/guides/automate-dashboard) — the complete aquarium dashboard

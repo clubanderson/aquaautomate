@@ -1,0 +1,267 @@
+---
+title: "Tank Scene Control with Lutron Pico Remotes"
+slug: "automate-scenes"
+description: "Map Lutron Pico 5-button remotes to aquarium scenes — day mode, night mode, feeding, maintenance, and movie mode — all controlled from Home Assistant."
+category: "automation"
+difficulty: "intermediate"
+author: "AquaAutomate"
+date: "2026-03-01"
+tags: ["lutron", "pico", "scenes", "home-assistant", "automation", "caseta"]
+image: "/images/guides/scenes.jpg"
+---
+
+# Tank Scene Control with Lutron Pico Remotes
+
+A Lutron Pico remote mounted next to your tank gives you one-button scene control — no phone needed. Day mode, night mode, feeding mode, maintenance mode, and movie mode. Each button changes every device on the tank to the right state.
+
+## What You'll Need
+
+- **Lutron Caseta Smart Bridge** — the hub that talks to Home Assistant
+- **Lutron Pico 5-Button Remote** — the physical controller
+- **Tuya/Shelly smart plugs** — on every tank device (lights, heater, pump, filter, feeder)
+- **Home Assistant** — already set up ([see getting started guide](/guides/ha-getting-started))
+
+## The 5 Scenes
+
+| Button | Scene | Lights | Heater | Filter | Air Pump | Feeder |
+|---|---|---|---|---|---|---|
+| Top | **Day Mode** | ON | ON | ON | ON | Schedule |
+| 2nd | **Night Mode** | OFF | ON | ON | ON (low) | OFF |
+| Center | **Feeding Mode** | DIM | ON | OFF | OFF | DISPENSE |
+| 4th | **Movie Mode** | Blue LED | ON | ON | OFF | OFF |
+| Bottom | **Maintenance** | ON (bright) | OFF | OFF | OFF | OFF |
+
+## Step 1: Set Up Lutron Caseta Bridge
+
+1. Plug the Caseta Smart Bridge into your router via Ethernet
+2. Download the Lutron app and pair the bridge
+3. Pair your Pico remote in the Lutron app
+4. In Home Assistant: **Settings → Devices & Services → Add Integration → Lutron Caseta**
+5. Press the pairing button on the bridge when prompted
+
+## Step 2: Create the Scenes
+
+Define each scene in your Home Assistant configuration:
+
+```yaml
+scene:
+  - name: "Tank Day Mode"
+    icon: mdi:white-balance-sunny
+    entities:
+      switch.tuya_aquarium_light:
+        state: "on"
+      switch.shelly_plug_heater:
+        state: "on"
+      switch.tuya_canister_filter:
+        state: "on"
+      switch.tuya_air_pump:
+        state: "on"
+
+  - name: "Tank Night Mode"
+    icon: mdi:moon-waning-crescent
+    entities:
+      switch.tuya_aquarium_light:
+        state: "off"
+      switch.shelly_plug_heater:
+        state: "on"
+      switch.tuya_canister_filter:
+        state: "on"
+      switch.tuya_air_pump:
+        state: "on"
+
+  - name: "Tank Movie Mode"
+    icon: mdi:movie-open
+    entities:
+      switch.tuya_aquarium_light:
+        state: "on"
+      switch.shelly_plug_heater:
+        state: "on"
+      switch.tuya_canister_filter:
+        state: "on"
+      switch.tuya_air_pump:
+        state: "off"
+
+  - name: "Tank Maintenance Mode"
+    icon: mdi:wrench
+    entities:
+      switch.tuya_aquarium_light:
+        state: "on"
+      switch.shelly_plug_heater:
+        state: "off"
+      switch.tuya_canister_filter:
+        state: "off"
+      switch.tuya_air_pump:
+        state: "off"
+```
+
+## Step 3: Map Pico Buttons to Scenes
+
+Each Pico button press fires a device trigger in Home Assistant. Map each to its scene:
+
+```yaml
+automation:
+  - alias: "Pico — Day Mode"
+    description: "Top button activates Day Mode"
+    trigger:
+      - platform: device
+        device_id: YOUR_PICO_DEVICE_ID
+        type: press
+        subtype: button_0
+    action:
+      - service: scene.turn_on
+        target:
+          entity_id: scene.tank_day_mode
+      - service: notify.mobile_app_your_phone
+        data:
+          message: "Tank → Day Mode"
+
+  - alias: "Pico — Night Mode"
+    description: "Second button activates Night Mode"
+    trigger:
+      - platform: device
+        device_id: YOUR_PICO_DEVICE_ID
+        type: press
+        subtype: button_2
+    action:
+      - service: scene.turn_on
+        target:
+          entity_id: scene.tank_night_mode
+
+  - alias: "Pico — Feeding Mode"
+    description: "Center button triggers full feeding sequence"
+    trigger:
+      - platform: device
+        device_id: YOUR_PICO_DEVICE_ID
+        type: press
+        subtype: button_3
+    action:
+      - service: script.turn_on
+        target:
+          entity_id: script.tank_feeding_mode
+
+  - alias: "Pico — Movie Mode"
+    description: "Fourth button activates Movie Mode (blue light, no bubbles)"
+    trigger:
+      - platform: device
+        device_id: YOUR_PICO_DEVICE_ID
+        type: press
+        subtype: button_4
+    action:
+      - service: scene.turn_on
+        target:
+          entity_id: scene.tank_movie_mode
+
+  - alias: "Pico — Maintenance Mode"
+    description: "Bottom button activates Maintenance Mode (lights on, everything else off)"
+    trigger:
+      - platform: device
+        device_id: YOUR_PICO_DEVICE_ID
+        type: press
+        subtype: button_5
+    action:
+      - service: scene.turn_on
+        target:
+          entity_id: scene.tank_maintenance_mode
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Maintenance Mode"
+          message: "Heater, filter, and pump OFF. Don't forget to re-enable when done!"
+```
+
+Replace `YOUR_PICO_DEVICE_ID` with your actual Pico device ID from Home Assistant (find it in **Settings → Devices → Lutron Caseta → your Pico remote**).
+
+## Step 4: Auto-Resume After Maintenance
+
+Maintenance mode turns off the heater and filter. Add a safety timer that auto-resumes Day Mode after 2 hours in case you forget:
+
+```yaml
+automation:
+  - alias: "Auto-Resume from Maintenance"
+    description: "Restore Day Mode after 2 hours of Maintenance Mode"
+    trigger:
+      - platform: state
+        entity_id: switch.shelly_plug_heater
+        to: "off"
+        for:
+          hours: 2
+    condition:
+      - condition: state
+        entity_id: switch.tuya_aquarium_light
+        state: "on"
+    action:
+      - service: scene.turn_on
+        target:
+          entity_id: scene.tank_day_mode
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Auto-Resumed Day Mode"
+          message: "Maintenance mode timed out after 2 hours. Heater and filter restored."
+```
+
+## Step 5: Dashboard Card
+
+Add scene buttons to your Lovelace dashboard:
+
+```yaml
+type: horizontal-stack
+cards:
+  - type: button
+    name: "Day"
+    icon: mdi:white-balance-sunny
+    tap_action:
+      action: call-service
+      service: scene.turn_on
+      target:
+        entity_id: scene.tank_day_mode
+  - type: button
+    name: "Night"
+    icon: mdi:moon-waning-crescent
+    tap_action:
+      action: call-service
+      service: scene.turn_on
+      target:
+        entity_id: scene.tank_night_mode
+  - type: button
+    name: "Feed"
+    icon: mdi:fish
+    tap_action:
+      action: call-service
+      service: script.turn_on
+      target:
+        entity_id: script.tank_feeding_mode
+  - type: button
+    name: "Movie"
+    icon: mdi:movie-open
+    tap_action:
+      action: call-service
+      service: scene.turn_on
+      target:
+        entity_id: scene.tank_movie_mode
+  - type: button
+    name: "Maint"
+    icon: mdi:wrench
+    tap_action:
+      action: call-service
+      service: scene.turn_on
+      target:
+        entity_id: scene.tank_maintenance_mode
+```
+
+## My Setup
+
+I have a Pico remote mounted on the wall next to my main tank. Guests love it — they can hit the feeding button and watch the fish swarm. The maintenance button is a lifesaver during water changes — one press and everything shuts off cleanly. The 2-hour auto-resume has saved me twice when I forgot to switch back.
+
+Movie mode was my wife's request — turns off the air pump (no bubbles), keeps the light on a blue setting, and makes the tank look like a living painting during movie night.
+
+## Tips
+
+- **Mount the Pico with the included wall plate** — it looks like a real light switch
+- **Label the buttons** with a small sticker strip (Day/Night/Feed/Movie/Maint)
+- **Use long-press for alternative actions** — Pico supports long-press events too
+- **Multiple Picos** — you can pair multiple remotes to the same bridge, one per room
+
+## What's Next?
+
+- [Automated Feeding](/guides/automate-feeding) — the full feeding mode script
+- [Smart Power Management](/guides/automate-power-management) — energy monitoring per device
+- [Build Your Dashboard](/guides/automate-dashboard) — the complete Lovelace aquarium dashboard
