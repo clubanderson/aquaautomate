@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 /** Max collections to fetch from Shopify */
 const MAX_COLLECTIONS = 20;
 
-/** Friendly display names for Shopify product types */
+/** Friendly display names for Shopify product types (keyed by UPPERCASE) */
 const PRODUCT_TYPE_LABELS: Record<string, string> = {
   "AMERICAN CICHLID": "American Cichlids",
   "AFRICAN CICHLIDS": "African Cichlids",
@@ -53,11 +53,15 @@ const PRODUCT_TYPE_LABELS: Record<string, string> = {
   KOI: "Koi",
   AROWANA: "Arowanas",
   MISCELLANEOUS: "Miscellaneous",
-  /* Phase 6: Plants & Driftwood */
+  /* Plants & Driftwood (covers both H2O Plants mixed-case and Danaqua uppercase) */
   DRIFTWOOD: "Driftwood",
   "LIVE PLANTS": "Live Plants",
+  PLANT: "Plants",
   PLANTS: "Plants",
   "LIVE PLANT": "Live Plants",
+  "GARDEN PLANTS": "Garden Plants",
+  "AQUATIC PLANTS": "Aquatic Plants",
+  "PACKING MATERIALS": "Packing Materials",
 };
 
 /** Minimum products in a type to show as its own section */
@@ -71,7 +75,9 @@ function groupProductsByType(products: NormalizedProduct[]): NormalizedCollectio
   const groups = new Map<string, NormalizedProduct[]>();
 
   for (const product of products) {
-    const type = product.productType || "MISCELLANEOUS";
+    /* Normalize to uppercase so mixed-case types (e.g. "Plant" from H2O
+       Plants) merge with uppercase types (e.g. "PLANTS" from Danaqua) */
+    const type = (product.productType || "MISCELLANEOUS").toUpperCase();
     const existing = groups.get(type) || [];
     existing.push(product);
     groups.set(type, existing);
@@ -80,13 +86,17 @@ function groupProductsByType(products: NormalizedProduct[]): NormalizedCollectio
   return Array.from(groups.entries())
     .filter(([, prods]) => prods.length >= MIN_PRODUCTS_PER_GROUP)
     .sort((a, b) => b[1].length - a[1].length)
-    .map(([type, prods]) => ({
-      id: `auto-${type.toLowerCase().replace(/\s+/g, "-")}`,
-      handle: type.toLowerCase().replace(/\s+/g, "-"),
-      title: PRODUCT_TYPE_LABELS[type] || type.charAt(0) + type.slice(1).toLowerCase(),
-      description: `${prods.length} products available from Danaqua Live Fish & More`,
-      products: prods,
-    }));
+    .map(([type, prods]) => {
+      const vendors = [...new Set(prods.map((p) => p.vendor).filter(Boolean))];
+      const vendorText = vendors.length > 0 ? vendors.join(", ") : "our suppliers";
+      return {
+        id: `auto-${type.toLowerCase().replace(/\s+/g, "-")}`,
+        handle: type.toLowerCase().replace(/\s+/g, "-"),
+        title: PRODUCT_TYPE_LABELS[type] || type.charAt(0) + type.slice(1).toLowerCase(),
+        description: `${prods.length} products available from ${vendorText}`,
+        products: prods,
+      };
+    });
 }
 
 interface CollectionsPageProps {
