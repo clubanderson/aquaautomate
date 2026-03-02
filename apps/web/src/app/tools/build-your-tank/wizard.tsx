@@ -103,6 +103,28 @@ const STEP_GUIDES: Partial<Record<WizardStep, StepGuide[]>> = {
       description: "Full AWC automation with dosing pumps and HA.",
     },
   ],
+  review: [
+    {
+      slug: "automate-dashboard",
+      title: "Build Your Aquarium Dashboard",
+      description: "Single-tank Lovelace dashboard with gauges and scenes.",
+    },
+    {
+      slug: "dashboard-multi-tank",
+      title: "Multi-Tank Command Center",
+      description: "Aggregate all tanks into one HA dashboard with alerts.",
+    },
+    {
+      slug: "dashboard-custom-cards",
+      title: "Advanced Dashboard with Custom Cards",
+      description: "Mushroom, mini-graph, and apexcharts for a polished look.",
+    },
+    {
+      slug: "dashboard-kiosk",
+      title: "Wall-Mounted Kiosk Display",
+      description: "Turn a cheap tablet into a dedicated fish room display.",
+    },
+  ],
 };
 
 /** Regex to extract gallon size from a tank title (e.g. "29 Gallon") */
@@ -325,12 +347,13 @@ export function TankWizard() {
                 These guides show you how to automate the equipment you selected with Home Assistant, Tuya smart plugs, and Shelly power monitors.
               </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {/* Deduplicate guides across all selected steps */}
+                {/* Deduplicate guides across all steps including review dashboard guides */}
                 {Array.from(
                   new Map(
                     Object.keys(selections)
                       .filter((key) => key !== "review" && selections[key as WizardStep] !== null)
                       .flatMap((key) => STEP_GUIDES[key as WizardStep] || [])
+                      .concat(STEP_GUIDES.review || [])
                       .map((g) => [g.slug, g])
                   ).values()
                 ).map((guide) => (
@@ -350,21 +373,6 @@ export function TankWizard() {
                     </div>
                   </Link>
                 ))}
-                {/* Always show dashboard guide on review */}
-                <Link
-                  href="/guides/automate-dashboard"
-                  className="group flex items-start gap-2 rounded-md border border-border/30 bg-card/50 p-2.5 transition-colors hover:border-aqua/30 hover:bg-aqua/5"
-                >
-                  <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-aqua" />
-                  <div>
-                    <p className="text-xs font-medium group-hover:text-aqua">
-                      Build Your Aquarium Dashboard
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      Combine all your sensors and controls into one HA dashboard.
-                    </p>
-                  </div>
-                </Link>
               </div>
             </div>
           )}

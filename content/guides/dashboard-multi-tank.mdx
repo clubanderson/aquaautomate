@@ -1,0 +1,528 @@
+---
+title: "Multi-Tank Command Center Dashboard"
+slug: "dashboard-multi-tank"
+description: "Build a single Home Assistant dashboard that monitors every tank side-by-side — temperature, device states, alerts, energy usage, and camera feeds all on one screen."
+category: "automation"
+difficulty: "intermediate"
+author: "AquaAutomate"
+date: "2026-03-02"
+tags: ["dashboard", "lovelace", "home-assistant", "multi-tank", "monitoring", "aggregate", "command-center"]
+image: "/images/guides/multi-tank-dashboard.jpg"
+---
+
+# Multi-Tank Command Center Dashboard
+
+If you run more than one tank, you need one screen that shows everything. No clicking through tabs, no missing an alert on the shrimp tank because you were looking at the cichlid tank. This guide builds a command center dashboard that aggregates all tanks, all sensors, and all switches into a single unified view.
+
+## What You'll Need
+
+- **Home Assistant** with all tank devices added
+- **2+ tanks** with smart plugs, temperature sensors, and any other monitored devices
+- Optional: **HACS** (Home Assistant Community Store) for custom cards
+- About 45 minutes to configure
+
+## Dashboard Architecture
+
+The command center uses a grid layout with one column per tank, plus a shared header row for aggregate status and global controls.
+
+```
+┌──────────────────────────────────────────────────────┐
+│  AGGREGATE STATUS BAR (alerts, total energy, scenes) │
+├─────────────┬─────────────┬─────────────┬────────────┤
+│  29G Comm.  │  10G Shrimp │  55G Cichl. │  5G Betta  │
+│  ─────────  │  ─────────  │  ─────────  │  ────────  │
+│  Temp: 78°F │  Temp: 74°F │  Temp: 80°F │  Temp: 79° │
+│  [gauge]    │  [gauge]    │  [gauge]    │  [gauge]   │
+│  ─────────  │  ─────────  │  ─────────  │  ────────  │
+│  Light: ON  │  Light: ON  │  Light: OFF │  Light: ON │
+│  Heat: ON   │  Heat: OFF  │  Heat: ON   │  Heat: ON  │
+│  Filter: ON │  Filter: ON │  Filter: ON │  Filter:ON │
+│  Air: OFF   │  Air: ON    │  Air: OFF   │  ────────  │
+│  ─────────  │  ─────────  │  ─────────  │  [camera]  │
+│  [camera]   │  [camera]   │  [camera]   │            │
+│  ─────────  │  ─────────  │  ─────────  │  ────────  │
+│  12W total  │  6W total   │  28W total  │  4W total  │
+└─────────────┴─────────────┴─────────────┴────────────┘
+```
+
+## Step 1: Template Sensors for Aggregate Data
+
+Before building the dashboard, create template sensors that aggregate data across all tanks.
+
+Add to `configuration.yaml`:
+
+```yaml
+template:
+  - sensor:
+      - name: "All Tanks Average Temperature"
+        unit_of_measurement: "°F"
+        state: >
+          {% set temps = [
+            states('sensor.inkbird_29g_temperature') | float(0),
+            states('sensor.inkbird_10g_temperature') | float(0),
+            states('sensor.inkbird_55g_temperature') | float(0),
+            states('sensor.inkbird_5g_temperature') | float(0)
+          ] %}
+          {{ (temps | sum / temps | length) | round(1) }}
+
+      - name: "All Tanks Total Power"
+        unit_of_measurement: "W"
+        state: >
+          {{ [
+            states('sensor.shelly_29g_total_power') | float(0),
+            states('sensor.shelly_10g_total_power') | float(0),
+            states('sensor.shelly_55g_total_power') | float(0),
+            states('sensor.shelly_5g_total_power') | float(0)
+          ] | sum | round(1) }}
+
+      - name: "Tanks With Alerts"
+        state: >
+          {% set count = 0 %}
+          {% if states('sensor.inkbird_29g_temperature') | float > 82 or
+                states('sensor.inkbird_29g_temperature') | float < 74 %}
+            {% set count = count + 1 %}
+          {% endif %}
+          {% if states('sensor.inkbird_10g_temperature') | float > 80 or
+                states('sensor.inkbird_10g_temperature') | float < 72 %}
+            {% set count = count + 1 %}
+          {% endif %}
+          {% if states('sensor.inkbird_55g_temperature') | float > 82 or
+                states('sensor.inkbird_55g_temperature') | float < 74 %}
+            {% set count = count + 1 %}
+          {% endif %}
+          {% if states('sensor.inkbird_5g_temperature') | float > 82 or
+                states('sensor.inkbird_5g_temperature') | float < 74 %}
+            {% set count = count + 1 %}
+          {% endif %}
+          {{ count }}
+```
+
+## Step 2: Aggregate Status Bar
+
+The top row shows at-a-glance health of the entire fish room:
+
+```yaml
+type: horizontal-stack
+cards:
+  - type: entity
+    entity: sensor.all_tanks_average_temperature
+    name: "Avg Temp"
+    icon: mdi:thermometer
+  - type: entity
+    entity: sensor.all_tanks_total_power
+    name: "Total Power"
+    icon: mdi:flash
+  - type: entity
+    entity: sensor.tanks_with_alerts
+    name: "Alerts"
+    icon: mdi:alert-circle
+    style: |
+      ha-card {
+        {% if states('sensor.tanks_with_alerts') | int > 0 %}
+        background: rgba(255, 107, 107, 0.2);
+        {% endif %}
+      }
+  - type: entity
+    entity: input_boolean.vacation_mode
+    name: "Vacation"
+    icon: mdi:airplane
+```
+
+## Step 3: Per-Tank Column Cards
+
+Create a reusable card pattern for each tank. Here's the 29-gallon community tank as a template:
+
+### Tank Header + Temperature
+
+```yaml
+type: vertical-stack
+title: "29G Community"
+cards:
+  - type: gauge
+    entity: sensor.inkbird_29g_temperature
+    name: "Temperature"
+    unit: "°F"
+    min: 68
+    max: 86
+    needle: true
+    severity:
+      green: 75
+      yellow: 80
+      red: 83
+    style: |
+      ha-card { --ha-card-header-font-size: 14px; }
+```
+
+### Device Switches
+
+```yaml
+  - type: glance
+    show_name: true
+    show_state: false
+    columns: 4
+    entities:
+      - entity: switch.tuya_29g_light
+        name: "Light"
+        icon: mdi:lightbulb
+        tap_action:
+          action: toggle
+      - entity: switch.shelly_29g_heater
+        name: "Heat"
+        icon: mdi:fire
+        tap_action:
+          action: toggle
+      - entity: switch.shelly_29g_filter
+        name: "Filter"
+        icon: mdi:water-pump
+        tap_action:
+          action: toggle
+      - entity: switch.tuya_29g_air_pump
+        name: "Air"
+        icon: mdi:air-filter
+        tap_action:
+          action: toggle
+```
+
+### Camera Feed
+
+```yaml
+  - type: picture-entity
+    entity: camera.29g_camera
+    show_name: false
+    show_state: false
+    camera_view: live
+    style: |
+      ha-card { border-radius: 8px; overflow: hidden; }
+```
+
+### Power Summary
+
+```yaml
+  - type: entities
+    entities:
+      - entity: sensor.shelly_29g_total_power
+        name: "Current Draw"
+        icon: mdi:flash
+      - entity: sensor.shelly_29g_total_energy
+        name: "Today"
+        icon: mdi:meter-electric
+```
+
+## Step 4: Put It All Together
+
+Use the **grid card** to lay out tanks side by side. Adjust `columns` based on how many tanks you have:
+
+```yaml
+views:
+  - title: "Fish Room"
+    icon: mdi:fishbowl
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+          # ── Aggregate header ──
+          - type: horizontal-stack
+            cards:
+              - type: entity
+                entity: sensor.all_tanks_average_temperature
+                name: "Avg Temp"
+                icon: mdi:thermometer
+              - type: entity
+                entity: sensor.all_tanks_total_power
+                name: "Total Power"
+                icon: mdi:flash
+              - type: entity
+                entity: sensor.tanks_with_alerts
+                name: "Alerts"
+                icon: mdi:alert-circle
+              - type: button
+                name: "All Lights"
+                icon: mdi:lightbulb-group
+                tap_action:
+                  action: call-service
+                  service: switch.toggle
+                  target:
+                    entity_id:
+                      - switch.tuya_29g_light
+                      - switch.tuya_10g_light
+                      - switch.tuya_55g_light
+                      - switch.tuya_5g_light
+
+          # ── Alert banner (only visible when problems exist) ──
+          - type: conditional
+            conditions:
+              - condition: numeric_state
+                entity: sensor.tanks_with_alerts
+                above: 0
+            card:
+              type: markdown
+              content: >
+                **{{ states('sensor.tanks_with_alerts') }} tank(s) need attention.**
+                Check temperature readings below.
+              style: |
+                ha-card {
+                  background: rgba(255, 107, 107, 0.15);
+                  border-left: 3px solid #ff6b6b;
+                }
+
+          # ── Tank columns ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              # Tank 1: 29G Community
+              - type: vertical-stack
+                title: "29G Community"
+                cards:
+                  - type: gauge
+                    entity: sensor.inkbird_29g_temperature
+                    unit: "°F"
+                    min: 68
+                    max: 86
+                    needle: true
+                    severity:
+                      green: 75
+                      yellow: 80
+                      red: 83
+                  - type: glance
+                    show_name: true
+                    show_state: false
+                    columns: 4
+                    entities:
+                      - entity: switch.tuya_29g_light
+                        name: "Light"
+                        tap_action: { action: toggle }
+                      - entity: switch.shelly_29g_heater
+                        name: "Heat"
+                        tap_action: { action: toggle }
+                      - entity: switch.shelly_29g_filter
+                        name: "Filter"
+                        tap_action: { action: toggle }
+                      - entity: switch.tuya_29g_air_pump
+                        name: "Air"
+                        tap_action: { action: toggle }
+                  - type: picture-entity
+                    entity: camera.29g_camera
+                    show_name: false
+                    show_state: false
+                    camera_view: live
+
+              # Tank 2: 10G Shrimp
+              - type: vertical-stack
+                title: "10G Shrimp"
+                cards:
+                  - type: gauge
+                    entity: sensor.inkbird_10g_temperature
+                    unit: "°F"
+                    min: 66
+                    max: 84
+                    needle: true
+                    severity:
+                      green: 72
+                      yellow: 78
+                      red: 80
+                  - type: glance
+                    show_name: true
+                    show_state: false
+                    columns: 3
+                    entities:
+                      - entity: switch.tuya_10g_light
+                        name: "Light"
+                        tap_action: { action: toggle }
+                      - entity: switch.shelly_10g_heater
+                        name: "Heat"
+                        tap_action: { action: toggle }
+                      - entity: switch.shelly_10g_filter
+                        name: "Filter"
+                        tap_action: { action: toggle }
+                  - type: picture-entity
+                    entity: camera.10g_camera
+                    show_name: false
+                    show_state: false
+                    camera_view: live
+
+              # Tank 3: 55G Cichlid
+              - type: vertical-stack
+                title: "55G Cichlid"
+                cards:
+                  - type: gauge
+                    entity: sensor.inkbird_55g_temperature
+                    unit: "°F"
+                    min: 70
+                    max: 88
+                    needle: true
+                    severity:
+                      green: 76
+                      yellow: 82
+                      red: 85
+                  - type: glance
+                    show_name: true
+                    show_state: false
+                    columns: 4
+                    entities:
+                      - entity: switch.tuya_55g_light
+                        name: "Light"
+                        tap_action: { action: toggle }
+                      - entity: switch.shelly_55g_heater
+                        name: "Heat"
+                        tap_action: { action: toggle }
+                      - entity: switch.shelly_55g_filter
+                        name: "Filter"
+                        tap_action: { action: toggle }
+                      - entity: switch.tuya_55g_air_pump
+                        name: "Air"
+                        tap_action: { action: toggle }
+                  - type: picture-entity
+                    entity: camera.55g_camera
+                    show_name: false
+                    show_state: false
+                    camera_view: live
+
+              # Tank 4: 5G Betta
+              - type: vertical-stack
+                title: "5G Betta"
+                cards:
+                  - type: gauge
+                    entity: sensor.inkbird_5g_temperature
+                    unit: "°F"
+                    min: 68
+                    max: 86
+                    needle: true
+                    severity:
+                      green: 76
+                      yellow: 82
+                      red: 84
+                  - type: glance
+                    show_name: true
+                    show_state: false
+                    columns: 3
+                    entities:
+                      - entity: switch.tuya_5g_light
+                        name: "Light"
+                        tap_action: { action: toggle }
+                      - entity: switch.shelly_5g_heater
+                        name: "Heat"
+                        tap_action: { action: toggle }
+                      - entity: switch.shelly_5g_filter
+                        name: "Filter"
+                        tap_action: { action: toggle }
+                  - type: picture-entity
+                    entity: camera.5g_camera
+                    show_name: false
+                    show_state: false
+                    camera_view: live
+
+          # ── Combined energy graph ──
+          - type: history-graph
+            title: "All Tanks — Power Draw (24h)"
+            hours_to_show: 24
+            entities:
+              - entity: sensor.shelly_29g_total_power
+                name: "29G"
+              - entity: sensor.shelly_10g_total_power
+                name: "10G"
+              - entity: sensor.shelly_55g_total_power
+                name: "55G"
+              - entity: sensor.shelly_5g_total_power
+                name: "5G"
+
+          # ── Combined temperature overlay ──
+          - type: history-graph
+            title: "All Tanks — Temperature (48h)"
+            hours_to_show: 48
+            entities:
+              - entity: sensor.inkbird_29g_temperature
+                name: "29G Community"
+              - entity: sensor.inkbird_10g_temperature
+                name: "10G Shrimp"
+              - entity: sensor.inkbird_55g_temperature
+                name: "55G Cichlid"
+              - entity: sensor.inkbird_5g_temperature
+                name: "5G Betta"
+```
+
+## Step 5: Global Scene Buttons
+
+Control all tanks at once with "fish room" scenes:
+
+```yaml
+type: horizontal-stack
+cards:
+  - type: button
+    name: "All Day"
+    icon: mdi:white-balance-sunny
+    tap_action:
+      action: call-service
+      service: scene.turn_on
+      target:
+        entity_id:
+          - scene.29g_day_mode
+          - scene.10g_day_mode
+          - scene.55g_day_mode
+          - scene.5g_day_mode
+    style: |
+      ha-card { background: rgba(0, 212, 170, 0.1); }
+  - type: button
+    name: "All Night"
+    icon: mdi:moon-waning-crescent
+    tap_action:
+      action: call-service
+      service: scene.turn_on
+      target:
+        entity_id:
+          - scene.29g_night_mode
+          - scene.10g_night_mode
+          - scene.55g_night_mode
+          - scene.5g_night_mode
+  - type: button
+    name: "All Feed"
+    icon: mdi:fish
+    tap_action:
+      action: call-service
+      service: script.turn_on
+      target:
+        entity_id:
+          - script.29g_feeding_mode
+          - script.10g_feeding_mode
+          - script.55g_feeding_mode
+  - type: button
+    name: "All Maint"
+    icon: mdi:wrench
+    tap_action:
+      action: call-service
+      service: scene.turn_on
+      target:
+        entity_id:
+          - scene.29g_maintenance_mode
+          - scene.10g_maintenance_mode
+          - scene.55g_maintenance_mode
+          - scene.5g_maintenance_mode
+    style: |
+      ha-card { background: rgba(255, 107, 107, 0.1); }
+```
+
+## Scaling Tips
+
+- **2 tanks**: Use `columns: 2` in the grid — each tank gets half the screen
+- **3 tanks**: Use `columns: 3` — works well on a wide monitor or TV
+- **4+ tanks**: Use `columns: 4` or add a horizontal scroll with swipe-card (HACS)
+- **Phone layout**: Create a separate mobile view with a stacked layout (one tank per card, swipe between them)
+
+## Naming Convention
+
+Keep entity names consistent across tanks to make copy-paste easy:
+
+| Pattern | Example |
+|---|---|
+| `sensor.inkbird_{size}_temperature` | `sensor.inkbird_29g_temperature` |
+| `switch.tuya_{size}_light` | `switch.tuya_29g_light` |
+| `switch.shelly_{size}_heater` | `switch.shelly_29g_heater` |
+| `switch.shelly_{size}_filter` | `switch.shelly_29g_filter` |
+| `switch.tuya_{size}_air_pump` | `switch.tuya_29g_air_pump` |
+| `camera.{size}_camera` | `camera.29g_camera` |
+
+## What's Next?
+
+- [Advanced Dashboard with Custom Cards](/guides/dashboard-custom-cards) — mushroom cards, mini-graph, and animated themes
+- [Wall-Mounted Kiosk Display](/guides/dashboard-kiosk) — dedicated tablet display for your fish room
+- [Scene Control with Lutron Pico](/guides/automate-scenes) — physical buttons for global scene control

@@ -1,0 +1,422 @@
+---
+title: "Wall-Mounted Kiosk Display for Your Fish Room"
+slug: "dashboard-kiosk"
+description: "Turn a cheap tablet into a dedicated always-on aquarium display — fullscreen kiosk mode, auto-dimming at night, ambient screensaver with camera feeds, and one-tap scene control."
+category: "automation"
+difficulty: "intermediate"
+author: "AquaAutomate"
+date: "2026-03-02"
+tags: ["dashboard", "kiosk", "tablet", "wall-mount", "display", "home-assistant", "ambient", "fire-tablet"]
+image: "/images/guides/kiosk-display.jpg"
+---
+
+# Wall-Mounted Kiosk Display for Your Fish Room
+
+A dedicated screen next to your tanks showing live camera feeds, temperature gauges, and one-tap controls is the ultimate fish room upgrade. This guide turns a cheap Fire tablet into a always-on aquarium command center with kiosk mode, auto-dim, and ambient screensaver.
+
+## What You'll Need
+
+- **Amazon Fire HD 8 or HD 10 tablet** (~$50-100) — best value for wall mounts
+- OR **Any Android tablet** with a web browser
+- **Tablet wall mount** — 3M adhesive or screw-mount (VESA or universal)
+- **USB cable** long enough to reach an outlet (6-10 ft)
+- **Home Assistant** with aquarium dashboard built
+- **Fully Kiosk Browser** app ($7, one-time) — OR free alternatives below
+
+## Hardware Options
+
+| Tablet | Price | Screen | Best For |
+|---|---|---|---|
+| Fire HD 8 | ~$50 | 8" | Single tank / small fish room |
+| Fire HD 10 | ~$100 | 10.1" | Multi-tank dashboard |
+| Samsung Tab A8 | ~$130 | 10.5" | Better display quality |
+| Old iPad | Free | Varies | If you have one lying around |
+| Fire HD 8 Plus | ~$70 | 8" | Wireless charging mount option |
+
+**Wall mounts**: Search for "tablet wall mount adhesive" — most are $10-15 and use 3M VHB tape (no drilling).
+
+## Step 1: Set Up Fully Kiosk Browser
+
+Fully Kiosk Browser is the gold standard for tablet dashboards. It provides fullscreen mode, auto-dim, motion wake, and remote management.
+
+### Install on Fire Tablet
+
+1. Enable **Apps from Unknown Sources** in Fire tablet settings
+2. Download Fully Kiosk Browser APK from [fully-kiosk.com](https://www.fully-kiosk.com)
+3. Install and open
+
+### Configure for Aquarium Dashboard
+
+Open Fully Kiosk settings:
+
+```
+Start URL:        http://homeassistant.local:8123/aquarium-dashboard/0
+                  (or your HA IP address)
+
+Web Content Settings:
+  ☑ Autoplay Videos    (for camera feeds)
+  ☑ Enable WebRTC      (for live camera streams)
+
+Kiosk Mode:
+  ☑ Enable Kiosk Mode
+  ☑ Hide Navigation Bar
+  ☑ Hide Status Bar
+  ☑ Prevent Sleep
+
+Screen Management:
+  Screen Brightness:           200   (normal daytime)
+  Screensaver Brightness:      5     (dim at night)
+  Screensaver Timer:           300   (5 minutes of inactivity)
+  Screensaver URL:             http://homeassistant.local:8123/aquarium-dashboard/camera-view
+  ☑ Turn Screen On on Motion   (uses front camera as motion sensor)
+  Motion Detection Sensitivity: 80
+
+Device Management:
+  ☑ Keep Screen On While Plugged In
+  ☑ Launch on Boot
+```
+
+### Free Alternatives
+
+If you don't want to pay for Fully Kiosk:
+- **WallPanel** (Android) — free, open source, motion detection
+- **Home Assistant Companion App** — native HA app, no kiosk features but works
+- **Chrome Kiosk Mode** — `chrome --kiosk http://your-ha-url` (no auto-dim)
+
+## Step 2: Kiosk Dashboard Layout
+
+Design a dashboard optimized for an always-on wall display. Key principles:
+
+1. **Large text** — readable from 3-5 feet away
+2. **High contrast** — dark background, bright indicators
+3. **Minimal clutter** — only show what matters at a glance
+4. **Touch-friendly** — big tap targets for controls
+
+### Kiosk-Optimized Dashboard
+
+```yaml
+views:
+  - title: "Kiosk"
+    icon: mdi:monitor
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+          # ── Large temperature display ──
+          - type: horizontal-stack
+            cards:
+              - type: custom:mushroom-template-card
+                primary: "{{ states('sensor.inkbird_29g_temperature') }}°F"
+                secondary: "29G Community"
+                icon: mdi:thermometer
+                icon_color: >
+                  {% if states('sensor.inkbird_29g_temperature') | float > 82 %}
+                    red
+                  {% elif states('sensor.inkbird_29g_temperature') | float > 80 %}
+                    amber
+                  {% else %}
+                    teal
+                  {% endif %}
+                card_mod:
+                  style: |
+                    ha-card { font-size: 1.4em; }
+
+              - type: custom:mushroom-template-card
+                primary: "{{ states('sensor.inkbird_55g_temperature') }}°F"
+                secondary: "55G Cichlid"
+                icon: mdi:thermometer
+                icon_color: >
+                  {% if states('sensor.inkbird_55g_temperature') | float > 82 %}
+                    red
+                  {% elif states('sensor.inkbird_55g_temperature') | float > 80 %}
+                    amber
+                  {% else %}
+                    teal
+                  {% endif %}
+                card_mod:
+                  style: |
+                    ha-card { font-size: 1.4em; }
+
+          # ── Camera feeds side by side ──
+          - type: horizontal-stack
+            cards:
+              - type: picture-entity
+                entity: camera.29g_camera
+                show_name: true
+                show_state: false
+                camera_view: live
+                name: "29G Community"
+              - type: picture-entity
+                entity: camera.55g_camera
+                show_name: true
+                show_state: false
+                camera_view: live
+                name: "55G Cichlid"
+
+          # ── Scene buttons (large, touch-friendly) ──
+          - type: grid
+            columns: 5
+            square: true
+            cards:
+              - type: button
+                name: "Day"
+                icon: mdi:white-balance-sunny
+                icon_height: 60px
+                tap_action:
+                  action: call-service
+                  service: scene.turn_on
+                  target:
+                    entity_id:
+                      - scene.29g_day_mode
+                      - scene.55g_day_mode
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(0, 212, 170, 0.1);
+                      font-size: 1.2em;
+                    }
+              - type: button
+                name: "Night"
+                icon: mdi:moon-waning-crescent
+                icon_height: 60px
+                tap_action:
+                  action: call-service
+                  service: scene.turn_on
+                  target:
+                    entity_id:
+                      - scene.29g_night_mode
+                      - scene.55g_night_mode
+                card_mod:
+                  style: |
+                    ha-card { font-size: 1.2em; }
+              - type: button
+                name: "Feed"
+                icon: mdi:fish
+                icon_height: 60px
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.all_tanks_feeding_mode
+                card_mod:
+                  style: |
+                    ha-card { font-size: 1.2em; }
+              - type: button
+                name: "Movie"
+                icon: mdi:movie-open
+                icon_height: 60px
+                tap_action:
+                  action: call-service
+                  service: scene.turn_on
+                  target:
+                    entity_id:
+                      - scene.29g_movie_mode
+                      - scene.55g_movie_mode
+                card_mod:
+                  style: |
+                    ha-card { font-size: 1.2em; }
+              - type: button
+                name: "Maint"
+                icon: mdi:wrench
+                icon_height: 60px
+                tap_action:
+                  action: call-service
+                  service: scene.turn_on
+                  target:
+                    entity_id:
+                      - scene.29g_maintenance_mode
+                      - scene.55g_maintenance_mode
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255, 107, 107, 0.1);
+                      font-size: 1.2em;
+                    }
+
+          # ── Device status strip ──
+          - type: glance
+            show_name: true
+            show_state: true
+            columns: 8
+            entities:
+              - entity: switch.tuya_29g_light
+                name: "29 Light"
+              - entity: switch.shelly_29g_heater
+                name: "29 Heat"
+              - entity: switch.shelly_29g_filter
+                name: "29 Filter"
+              - entity: switch.tuya_29g_air_pump
+                name: "29 Air"
+              - entity: switch.tuya_55g_light
+                name: "55 Light"
+              - entity: switch.shelly_55g_heater
+                name: "55 Heat"
+              - entity: switch.shelly_55g_filter
+                name: "55 Filter"
+              - entity: switch.tuya_55g_air_pump
+                name: "55 Air"
+```
+
+## Step 3: Ambient Screensaver
+
+When nobody's in front of the kiosk, show a rotating camera feed as a screensaver — like a live fish tank picture frame.
+
+### Camera Screensaver Dashboard
+
+Create a separate dashboard view for the screensaver:
+
+```yaml
+  - title: "Screensaver"
+    path: camera-view
+    type: panel
+    cards:
+      - type: custom:swipe-card
+        parameters:
+          autoplay:
+            delay: 10000
+            disableOnInteraction: false
+          effect: fade
+          loop: true
+        cards:
+          - type: picture-entity
+            entity: camera.29g_camera
+            show_name: true
+            show_state: false
+            camera_view: live
+            card_mod:
+              style: |
+                ha-card {
+                  border: none;
+                  background: black;
+                }
+          - type: picture-entity
+            entity: camera.55g_camera
+            show_name: true
+            show_state: false
+            camera_view: live
+            card_mod:
+              style: |
+                ha-card {
+                  border: none;
+                  background: black;
+                }
+```
+
+Set this as the screensaver URL in Fully Kiosk — it rotates between tank camera feeds every 10 seconds with a fade transition. At 5% brightness it creates a beautiful ambient glow.
+
+## Step 4: Auto-Dim with HA Automation
+
+Use Home Assistant to control the kiosk brightness based on time of day and tank lighting state:
+
+```yaml
+automation:
+  - alias: "Kiosk — Dim for Night"
+    description: "Dim the kiosk display when all tank lights turn off"
+    trigger:
+      - platform: state
+        entity_id:
+          - switch.tuya_29g_light
+          - switch.tuya_55g_light
+        to: "off"
+    condition:
+      - condition: state
+        entity_id: switch.tuya_29g_light
+        state: "off"
+      - condition: state
+        entity_id: switch.tuya_55g_light
+        state: "off"
+    action:
+      - service: rest_command.kiosk_set_brightness
+        data:
+          brightness: 5
+      - service: rest_command.kiosk_load_url
+        data:
+          url: "http://homeassistant.local:8123/aquarium-dashboard/camera-view"
+
+  - alias: "Kiosk — Brighten for Day"
+    description: "Brighten the kiosk when any tank light turns on"
+    trigger:
+      - platform: state
+        entity_id:
+          - switch.tuya_29g_light
+          - switch.tuya_55g_light
+        to: "on"
+    action:
+      - service: rest_command.kiosk_set_brightness
+        data:
+          brightness: 200
+      - service: rest_command.kiosk_load_url
+        data:
+          url: "http://homeassistant.local:8123/aquarium-dashboard/0"
+```
+
+### Fully Kiosk REST Commands
+
+Add to `configuration.yaml` to control the kiosk remotely:
+
+```yaml
+rest_command:
+  kiosk_set_brightness:
+    url: "http://TABLET_IP:2323/?cmd=setStringSetting&key=screenBrightness&value={{ brightness }}&password=YOUR_KIOSK_PASSWORD"
+
+  kiosk_load_url:
+    url: "http://TABLET_IP:2323/?cmd=loadURL&url={{ url }}&password=YOUR_KIOSK_PASSWORD"
+
+  kiosk_screen_on:
+    url: "http://TABLET_IP:2323/?cmd=screenOn&password=YOUR_KIOSK_PASSWORD"
+
+  kiosk_screen_off:
+    url: "http://TABLET_IP:2323/?cmd=screenOff&password=YOUR_KIOSK_PASSWORD"
+```
+
+## Step 5: Alert Takeover
+
+When something goes wrong, take over the kiosk to show an alert — impossible to miss:
+
+```yaml
+automation:
+  - alias: "Kiosk — Temperature Emergency Takeover"
+    description: "Flash the kiosk red on temperature emergency"
+    trigger:
+      - platform: numeric_state
+        entity_id:
+          - sensor.inkbird_29g_temperature
+          - sensor.inkbird_55g_temperature
+        above: 84
+        for:
+          minutes: 2
+    action:
+      - service: rest_command.kiosk_set_brightness
+        data:
+          brightness: 255
+      - service: rest_command.kiosk_load_url
+        data:
+          url: "http://homeassistant.local:8123/aquarium-dashboard/0"
+```
+
+## Mounting Tips
+
+- **3M Command Strips** — damage-free, holds tablets up to 5 lbs
+- **Magnetic mount** — uses a metal plate stuck to the tablet, pops on/off for charging
+- **Position at eye level** near the tanks — you'll look at it all the time
+- **Route the USB cable** along the wall with cable clips
+- **Use a right-angle USB cable** so it doesn't stick out behind the mount
+- **Consider wireless charging** (Fire HD 8 Plus) for a cleaner look
+
+## Fire Tablet Setup Tips
+
+1. **Disable lock screen** — Settings → Security → No Lock
+2. **Disable screen timeout** — Fully Kiosk handles this
+3. **Disable automatic updates** — prevents random reboots
+4. **Install Google Play Store** (optional) — needed for some apps like WallPanel
+5. **Set Fully Kiosk to launch on boot** — survives power outages
+
+## My Setup
+
+I run a Fire HD 10 mounted next to my 29-gallon with a 3M adhesive mount. Fully Kiosk shows the main dashboard during the day (brightness 180) and switches to the camera screensaver at night (brightness 5). The front camera motion sensor wakes it to full brightness when I walk up. Total cost was about $115 — the tablet ($100), mount ($10), and right-angle cable ($5). Best $115 I've spent on this hobby.
+
+## What's Next?
+
+- [Multi-Tank Command Center](/guides/dashboard-multi-tank) — the dashboard to put on your kiosk
+- [Advanced Dashboard with Custom Cards](/guides/dashboard-custom-cards) — mushroom + mini-graph for a polished look
+- [Camera Monitoring](/guides/automate-camera-monitoring) — set up the camera feeds for your kiosk screensaver
