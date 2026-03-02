@@ -48,7 +48,7 @@ export function WizardMobileCart({
   if (items.length === 0) return null;
 
   const subtotal = items.reduce(
-    (sum, item) => sum + Number(item.product.price.amount),
+    (sum, item) => sum + Number(item.product.price.amount) * item.quantity,
     0,
   );
 
