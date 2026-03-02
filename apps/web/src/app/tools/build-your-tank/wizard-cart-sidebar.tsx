@@ -349,6 +349,8 @@ export function WizardCartSidebar({
               <Link
                 key={guide.slug}
                 href={`/guides/${guide.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="group block rounded-md border border-border/30 bg-card/50 p-2 transition-colors hover:border-aqua/30 hover:bg-aqua/5"
               >
                 <p className="text-xs font-medium group-hover:text-aqua">
